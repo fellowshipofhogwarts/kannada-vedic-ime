@@ -1,0 +1,20 @@
+Kannada Vedic IME - quick start (Windows)
+
+1. Install the font: double-click Kaveri.ttf, then click Install.
+   (If you had "Kannada Vedic Long" before, uninstall it first: Settings > Personalization > Fonts.)
+2. Double-click kannada_ime.exe. A saffron tray icon with the letter ka appears
+   near the clock (click the ^ arrow if you do not see it).
+3. Open a text box in a browser, Word or VS Code and choose the font "Kaveri".
+4. Type:  namaste   gM'   ka_   agni'mILE'
+   Ctrl+Shift+K switches Kannada typing on and off. Right-click the tray icon for the menu.
+
+Windows may say "Windows protected your PC" because the program is not signed.
+Click "More info", then "Run anyway". Only do this for a copy you downloaded from the
+official project page.
+
+Notepad does not position Vedic marks correctly; use a browser, Word, LibreOffice or VS Code.
+
+To start it with Windows: press Win+R, type shell:startup, press Enter, and drop a
+shortcut to kannada_ime.exe into that folder.
+
+Licences: program MIT OR Apache-2.0, font SIL OFL 1.1 (OFL.txt).

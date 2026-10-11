@@ -1,0 +1,21 @@
+<!doctype html><html lang="kn"><head><meta charset="utf-8">
+<title>Goda Vedic accent test</title>
+<style>
+@font-face{font-family:"GodaTest";src:local("Goda"),url("Goda_1_0_62.ttf") format("truetype");}
+@font-face{font-family:"LongTest";src:local("Kaveri"),url("Kaveri.ttf") format("truetype");}
+body{font:16px system-ui,sans-serif;max-width:980px;margin:24px auto;padding:0 16px}
+.kn,textarea{line-height:1.9;letter-spacing:normal}
+.g,#box.g{font-family:"GodaTest"} .l,#box.l{font-family:"LongTest"}
+.kn{font-size:60px;padding:.3em .5em}
+table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ccc;padding:4px 8px;text-align:left;vertical-align:middle}
+textarea{width:100%;height:220px;font-size:48px;box-sizing:border-box}
+</style></head><body>
+<h1>Goda vs Kaveri</h1>
+<p>Left: original Goda. Right: the copy with taller bars (+40 %). Both need to be installed
+(or the two <code>.ttf</code> files placed next to this page). Anudatta is unchanged.</p>
+<table><tr><th>Typed</th><th>Goda</th><th>Kaveri</th></tr><tr><td><code>ka'</code></td><td class='kn g'>ಕ॑</td><td class='kn l'>ಕ॑</td></tr><tr><td><code>ka_</code></td><td class='kn g'>ಕ॒</td><td class='kn l'>ಕ॒</td></tr><tr><td><code>ka"</code></td><td class='kn g'>ಕ᳚</td><td class='kn l'>ಕ᳚</td></tr><tr><td><code>kaM'</code></td><td class='kn g'>ಕಂ॑</td><td class='kn l'>ಕಂ॑</td></tr><tr><td><code>kiM_</code></td><td class='kn g'>ಕಿಂ॒</td><td class='kn l'>ಕಿಂ॒</td></tr><tr><td><code>agni'</code></td><td class='kn g'>ಅಗ್ನಿ॑</td><td class='kn l'>ಅಗ್ನಿ॑</td></tr><tr><td><code>kShE"</code></td><td class='kn g'>ಕ್ಷೇ᳚</td><td class='kn l'>ಕ್ಷೇ᳚</td></tr><tr><td><code>saMskRRi_</code></td><td class='kn g'>ಸಂಸ್ಕೃ॒</td><td class='kn l'>ಸಂಸ್ಕೃ॒</td></tr></table>
+<h2>Type here (Kannada typing program running)</h2>
+<p>Font: <select id="pick"><option value="g">Goda</option><option value="l">Kaveri</option></select></p>
+<textarea id="box" class="g" placeholder="Try:  ka'  ka_  ka&quot;  kaM'  agni'"></textarea>
+<script>document.getElementById('pick').onchange=function(){document.getElementById('box').className=this.value}</script>
+</body></html>

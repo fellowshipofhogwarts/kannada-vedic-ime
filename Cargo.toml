@@ -1,0 +1,51 @@
+[package]
+name = "kannada_ime"
+version = "0.3.0"
+license = "MIT OR Apache-2.0"
+authors = ["Shashank Koundinya Banavathi Rajashekara"]
+edition = "2021"
+rust-version = "1.80"
+description = "Tiny background agent: phonetic Kannada typing with Vedic accents in any text field"
+readme = "README.md"
+publish = false
+
+[[bin]]
+name = "kannada_ime"
+path = "src/main.rs"
+
+# ---- shared dependencies --------------------------------------------------
+[dependencies]
+tao = "0.30"            # event loop (Win32 message loop / GTK) for the tray
+tray-icon = "0.19"      # system tray icon + context menu (re-exports muda menus)
+notify-rust = "4"       # native toast notifications (WinRT toast / D-Bus)
+open = "5"              # open the quick-reference page in the default browser
+arboard = "3"           # clipboard (only used by `--inject clipboard`)
+
+# ---- Windows: raw Win32 bindings (same project as windows-rs) --------------
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.59"
+features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Threading",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_WindowsAndMessaging",
+]
+
+# ---- Linux: evdev capture + synthetic input --------------------------------
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+rdev = { version = "0.5", features = ["unstable_grab"] }
+enigo = "0.3"
+
+# ---- Windows: embed the .exe icon + version info ---------------------------
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
+# ---- Small, fast release binary --------------------------------------------
+[profile.release]
+opt-level = "z"     # smallest code; the hot path is microseconds either way
+lto = true
+codegen-units = 1
+panic = "abort"     # no unwinding machinery; a panic in a hook must not unwind into Win32
+strip = true

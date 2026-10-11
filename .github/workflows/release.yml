@@ -1,0 +1,33 @@
+name: Release
+
+# Runs when you publish a release on GitHub (Releases -> Draft a new release -> Publish).
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release
+      - name: Make the zip
+        shell: pwsh
+        run: |
+          $name = "kannada-vedic-ime-${{ github.event.release.tag_name }}-windows"
+          New-Item -ItemType Directory $name | Out-Null
+          Copy-Item target/release/kannada_ime.exe $name/
+          Copy-Item fonts/Kaveri.ttf, fonts/OFL.txt $name/
+          Copy-Item packaging/QUICKSTART.txt, LICENSE-MIT, LICENSE-APACHE, CHANGELOG.md $name/
+          Compress-Archive -Path $name -DestinationPath "$name.zip"
+          echo "ZIP=$name.zip" >> $env:GITHUB_ENV
+      - name: Attach to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" $env:ZIP --clobber
