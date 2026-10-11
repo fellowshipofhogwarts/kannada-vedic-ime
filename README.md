@@ -9,6 +9,26 @@ namaste → ನಮಸ್ತೆ     kannaDa → ಕನ್ನಡ     saMskRRita �
 agni'   → ಅಗ್ನಿ॑      ka_ → ಕ॒              ka" → ಕ᳚                 ka^^ → ಕ᳚
 ```
 
+## How this was made
+
+This project was **vibe coded extensively with [Claude](https://claude.ai)** (an AI assistant by Anthropic).
+Shashank Koundinya Banavathi Rajashekara set the goals, chose the typing scheme and the Vedic
+conventions, tested every version on Windows, and decided what to keep. Claude wrote most of the code,
+the tests, the web typer, the font-modification script and the documentation, in a long conversation.
+
+What that means for you:
+
+* **Tested by use, not by audit.** The typing engine has automated tests, and the Windows program and
+  the Kaveri font have been used on one Windows PC. Nobody has done a professional code or security review.
+  The program listens to all keystrokes while it is switched on, so read the source in `src/hook/` if that
+  matters to you.
+* **Linux and macOS are untested.** The Linux code exists but has not been run on a real desktop.
+* **Check the Vedic text.** The mappings follow common Baraha-style conventions. Compare the output with
+  your own printed edition before relying on it for recitation or publishing, and open an issue if a sign
+  or accent order is wrong.
+* **The font is third-party work.** Kaveri is a small modification of Goda, which is itself derived from
+  Sampige (see Licence below). The credit for the letterforms belongs to those authors.
+
 ## Download and use (Windows)
 
 1. Download `kannada-vedic-ime-vX.Y.Z-windows.zip` from the **Releases** page.
@@ -170,3 +190,9 @@ Manager / `ps` and trim with `--off` + fewer features if it matters.
 * **Font (`fonts/Kaveri.ttf`):** SIL Open Font License 1.1 — see `fonts/OFL.txt`. It is a modified
   copy of Goda (Parankusacar Institute of Vedic Studies, derived from Sampige by IISc) and is renamed
   because "Goda" is a Reserved Font Name.
+
+## Credits
+
+* Goda font: Parankusacar Institute of Vedic Studies (derived from Sampige, Indian Institute of Science).
+* Typing scheme: inspired by Baraha-style phonetic input.
+* Code, tests, web typer and documentation: written with Claude (Anthropic), directed and tested by the project author.
