@@ -97,24 +97,32 @@ pub struct Rendered {
     pub attachable: bool,
 }
 
-/// Render a roman string to Kannada Unicode (Baraha scheme).
+/// Render a roman string to Kannada Unicode (Baraha scheme), Vedic mode on.
 ///
 /// Rules, in one place:
 /// * consonant  → cluster + virama (`pending` = virama may still be replaced)
 /// * vowel      → after a pending consonant: replace virama by the matra (or drop
-///                it for inherent `a`); otherwise the independent vowel
-/// * MM         → agama anusvara U+A8F3 (letter-like; accents attach to it)
-/// * `gM` → U+A8F3 alone (the sign already contains the ga); `gaM` → ಗ + ordinary anusvara
-/// * M / H      → anusvara / visarga (drops a pending virama first); inserted
-///                *before* any Vedic marks already present (canonical order)
-/// * accent     → combining mark appended after the unit (drops a pending
-///                virama: an accent implies the inherent `a`); runs of marks
-///                are kept sorted by combining class; with nothing to attach
-///                to it stays a literal character
+///   it for inherent `a`); otherwise the independent vowel
+/// * M / H      → anusvara / visarga. Right after a bare consonant the virama is
+///   dropped (full letter: `kM` = ಕಂ). With a break key in between the virama
+///   stays (half letter: `` k`M `` = ಕ್ಂ). Otherwise the sign is inserted
+///   *before* any Vedic marks already present (canonical order)
+/// * `` g`M `` → with Vedic mode on, the single agama anusvara U+A8F3 (it already
+///   contains the ga); with Vedic mode off, the plain ಗ್ಂ
+/// * accent     → (Vedic mode only) combining mark appended after the unit (drops
+///   a pending virama: an accent implies the inherent `a`); runs of marks
+///   are kept sorted by combining class; with nothing to attach
+///   to it stays a literal character
 /// * `` ` ``    → break: next vowel is independent, nothing is emitted
 /// * unknown    → kept literally (this is how partial tokens like `R` show up
-///                until `RRi` completes them)
+///   until `RRi` completes them)
 pub fn render(roman: &str) -> Rendered {
+    render_with(roman, true)
+}
+
+/// [`render`] with the Vedic switch: when `vedic` is false the accent keys are
+/// ordinary characters and `` g`M `` gives ಗ್ಂ instead of U+A8F3.
+pub fn render_with(roman: &str, vedic: bool) -> Rendered {
     let table = mapping::table();
     let mut out = String::with_capacity(roman.len() * 3);
     let mut pending = false; // out currently ends with a virama we appended
@@ -129,6 +137,9 @@ pub fn render(roman: &str) -> Rendered {
             let end = i + len;
             if end <= roman.len() && roman.is_char_boundary(end) {
                 if let Some(t) = table.get(&roman[i..end]) {
+                    if !vedic && matches!(t, Tok::Accent(_)) {
+                        continue; // Vedic mode off: accent keys are plain text
+                    }
                     hit = Some((*t, len));
                     break;
                 }
@@ -168,32 +179,24 @@ pub fn render(roman: &str) -> Rendered {
                 after_break = false;
             }
             Tok::Sign(s) => {
-                if pending && s == mapping::ANUSVARA && ends_with_ga_virama(&out) {
-                    // bare ga + M: U+A8F3 already *contains* the ga, so it replaces it.
-                    out.pop(); // virama
-                    out.pop(); // ga
-                    out.push(mapping::AGAMA_ANUSVARA);
+                if pending && after_break {
+                    // Break key before the sign: keep the half consonant (virama stays).
+                    if vedic && s == mapping::ANUSVARA && ends_with_ga_virama(&out) {
+                        // U+A8F3 already *contains* the ga, so it replaces ga + virama.
+                        out.pop(); // virama
+                        out.pop(); // ga
+                        out.push(mapping::AGAMA_ANUSVARA);
+                    } else {
+                        out.push(s);
+                    }
                 } else if pending {
-                    out.pop(); // the virama
+                    out.pop(); // the virama: full consonant + sign
                     out.push(s);
                 } else {
                     // Canonical order: sign goes before any Vedic marks typed earlier.
                     let at = trailing_marks_start(&out);
                     out.insert(at, s);
                 }
-                pending = false;
-                attachable = true;
-                after_break = false;
-            }
-            Tok::Agama(c) => {
-                if pending {
-                    let ga = ends_with_ga_virama(&out);
-                    out.pop(); // virama
-                    if ga {
-                        out.pop(); // U+A8F3 contains the ga itself
-                    }
-                }
-                out.push(c);
                 pending = false;
                 attachable = true;
                 after_break = false;
@@ -280,10 +283,22 @@ pub fn diff(old: &str, new: &str) -> Edit {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Engine {
     buf: String,
     shown: String,
+    /// Vedic mode: accent keys and the agama anusvara are active.
+    vedic: bool,
+}
+
+impl Default for Engine {
+    fn default() -> Self {
+        Self {
+            buf: String::new(),
+            shown: String::new(),
+            vedic: true,
+        }
+    }
 }
 
 impl Engine {
@@ -297,12 +312,25 @@ impl Engine {
         self.shown.clear();
     }
 
+    /// Switch Vedic mode. A change ends the current word.
+    pub fn set_vedic(&mut self, on: bool) {
+        if self.vedic != on {
+            self.vedic = on;
+            self.reset();
+        }
+    }
+
+    #[cfg(test)]
     pub fn is_idle(&self) -> bool {
         self.buf.is_empty()
     }
 
     /// Feed one typed character (already resolved from the key + layout).
     pub fn on_char(&mut self, c: char) -> Outcome {
+        if c == '`' && self.buf.ends_with('`') {
+            // A repeated break key changes nothing: swallow it silently.
+            return Outcome::Consumed(Edit::default());
+        }
         if mapping::is_phonetic_key(c) {
             if self.buf.len() >= MAX_BUFFER {
                 self.reset();
@@ -310,7 +338,7 @@ impl Engine {
             self.buf.push(c);
             return Outcome::Consumed(self.sync());
         }
-        if mapping::is_accent_key(c) && render(&self.buf).attachable {
+        if self.vedic && mapping::is_accent_key(c) && render_with(&self.buf, true).attachable {
             // `'`/`^`/`_`/`"`… only act as accents right after a Kannada unit;
             // anywhere else they are ordinary punctuation and pass through.
             if self.buf.len() >= MAX_BUFFER {
@@ -335,7 +363,7 @@ impl Engine {
     }
 
     fn sync(&mut self) -> Edit {
-        let r = render(&self.buf);
+        let r = render_with(&self.buf, self.vedic);
         let edit = diff(&self.shown, &r.text);
         self.shown = r.text;
         edit
@@ -456,12 +484,18 @@ mod tests {
         assert_eq!(typed("kShetra"), "ಕ್ಷೆತ್ರ");
         assert_eq!(typed("xetra"), "ಕ್ಷೆತ್ರ");
         assert_eq!(typed("bhaarata"), "ಭಾರತ");
+        assert_eq!(typed("Baarata"), "ಭಾರತ");
         assert_eq!(typed("shaale"), "ಶಾಲೆ");
+        assert_eq!(typed("Saale"), "ಶಾಲೆ");
         assert_eq!(typed("Sha"), "ಷ");
+        assert_eq!(typed("SHa"), "ಷ");
         assert_eq!(typed("kh"), "ಖ್");
         assert_eq!(typed("aM"), "ಅಂ");
         assert_eq!(typed("aH"), "ಅಃ");
         assert_eq!(typed("~ga"), "ಙ");
+        assert_eq!(typed(":ga"), "ಙ");
+        assert_eq!(typed(":ja"), "ಞ");
+        assert_eq!(typed(":"), ":");
         assert_eq!(typed("k"), "ಕ್"); // trailing virama stays
     }
 
@@ -498,14 +532,14 @@ mod tests {
         assert_eq!(sc.s(), "ಕೀ");
         assert_eq!(sc.backspaces_sent - before, 1);
 
-        // Typing the rest of "kSh" does not flicker: S then h renders the same.
-        let mut e = Engine::new();
-        e.on_char('k');
-        e.on_char('S');
-        match e.on_char('h') {
-            Outcome::Consumed(ed) => assert!(ed.is_noop()),
-            o => panic!("{o:?}"),
-        }
+        // "kSh": S is ಶ, and the h upgrades it to ಷ in place (two backspaces).
+        let mut sc = Screen::default();
+        sc.type_str("kS");
+        assert_eq!(sc.s(), "ಕ್ಶ್");
+        let before = sc.backspaces_sent;
+        sc.type_str("h");
+        assert_eq!(sc.s(), "ಕ್ಷ್");
+        assert_eq!(sc.backspaces_sent - before, 2);
     }
 
     #[test]
@@ -518,8 +552,10 @@ mod tests {
         sc.backspace();
         assert_eq!(sc.s(), "");
         // Empty buffer: native backspace passes through and deletes foreign text.
-        let mut sc = Screen::default();
-        sc.text = "xyz".chars().collect();
+        let mut sc = Screen {
+            text: "xyz".chars().collect(),
+            ..Screen::default()
+        };
         sc.backspace();
         assert_eq!(sc.s(), "xy");
     }
@@ -718,7 +754,7 @@ mod tests {
         // Property test (tiny LCG, no deps): for random keystroke soup, nothing
         // that must precede a Vedic mark ever follows one, and runs of marks are
         // sorted by combining class.
-        let alphabet: Vec<char> = "kgjtmnrsaAiueEoMH'_^\"\\`".chars().collect();
+        let alphabet: Vec<char> = "kgjtmnrsaAiueEoMHKGSP:'_^\"\\`".chars().collect();
         let mut seed: u64 = 0xD1B54A32D192ED03;
         for _ in 0..5000 {
             let mut s = String::new();
@@ -757,7 +793,7 @@ mod tests {
     #[test]
     fn incremental_equals_batch_for_random_input() {
         // Tiny LCG; no external crates.
-        let alphabet: Vec<char> = "kgcjTDNtdnpbmyrlvwshLxSfaAiIuUeEoO~MH`'_^\"\\"
+        let alphabet: Vec<char> = "kgcjTDNtdnpbmyrlvwshLxSfaAiIuUeEoO~MH:KGJPB`'_^\"\\"
             .chars()
             .collect();
         let mut seed: u64 = 0x9E3779B97F4A7C15;
@@ -792,7 +828,7 @@ mod tests {
 
     #[test]
     fn render_never_panics_on_odd_input() {
-        for s in ["", "~", "RR", "'", "^^^", "ಕ", "k😀a", "\u{0}", "`", "``a"] {
+        for s in ["", "~", ":", "RR", "'", "^^^", "ಕ", "k😀a", "\u{0}", "`", "``a", "c`", "g`M`"] {
             let _ = render(s);
         }
     }
@@ -824,22 +860,119 @@ mod tests {
     }
 
     #[test]
-    fn agama_anusvara_takes_marks() {
-        // U+A8F3 after ga, then Udatta; MM is not two anusvaras.
-        assert_eq!(render("gaMM'").text.chars().count(), 3); // ga + A8F3 stays possible
-        assert_eq!(render("MM_").text, "\u{A8F3}\u{0952}");
-        // a single M is still the ordinary anusvara
+    fn agama_anusvara_comes_only_from_g_break_m() {
+        // Break key + M after a bare ga: the single sign U+A8F3 (it contains the ga).
+        assert_eq!(render("g`M").text, "\u{A8F3}");
+        assert_eq!(render("g`M'").text, "\u{A8F3}\u{0951}");
+        assert_eq!(render("g`M_").text, "\u{A8F3}\u{0952}");
+        assert_eq!(render("ag`M").text, "\u{0C85}\u{A8F3}");
+        // Without the break key, gM is the ordinary full letter + anusvara, like kM.
+        assert_eq!(render("gM").text, "\u{0C97}\u{0C82}");
+        assert_eq!(render("gM'").text, "\u{0C97}\u{0C82}\u{0951}");
         assert_eq!(render("gaM").text, "\u{0C97}\u{0C82}");
+        // MM has no special meaning any more.
+        assert_eq!(render("gMM").text, "\u{0C97}\u{0C82}\u{0C82}");
+        assert!(!render("saMskRuta").text.contains('\u{A8F3}'));
+        // Other letters never give the agama sign.
+        assert_eq!(render("k`M").text, "\u{0C95}\u{0CCD}\u{0C82}");
     }
 
     #[test]
-    fn gm_is_a_single_agama_glyph() {
-        assert_eq!(render("gM'").text, "\u{A8F3}\u{0951}"); // no extra ga
-        assert_eq!(render("gMM'").text, "\u{A8F3}\u{0951}");
-        assert_eq!(render("gaM'").text, "\u{0C97}\u{0C82}\u{0951}");
-        assert_eq!(render("kM").text, "\u{0C95}\u{0C82}"); // other letters: ordinary anusvara
-        assert_eq!(render("gH").text, "\u{0C97}\u{0C83}");
-        assert_eq!(render("agM").text, "\u{0C85}\u{A8F3}");
-        assert!(!render("saMskRRita").text.contains('\u{A8F3}'));
+    fn break_key_keeps_the_half_consonant_before_signs() {
+        for (typed_, want) in [
+            ("c`H", "\u{0C9A}\u{0CCD}\u{0C83}"),
+            ("k`M", "\u{0C95}\u{0CCD}\u{0C82}"),
+            ("c`M", "\u{0C9A}\u{0CCD}\u{0C82}"),
+            ("g`H", "\u{0C97}\u{0CCD}\u{0C83}"),
+            // Without the break key: the full consonant, as before.
+            ("cH", "\u{0C9A}\u{0C83}"),
+            ("kM", "\u{0C95}\u{0C82}"),
+            ("cM", "\u{0C9A}\u{0C82}"),
+            ("gH", "\u{0C97}\u{0C83}"),
+        ] {
+            assert_eq!(render(typed_).text, want, "typed {typed_:?}");
+        }
+        // The half form is stable under later keys and accents.
+        assert_eq!(render("c`H'").text, "\u{0C9A}\u{0CCD}\u{0C83}\u{0951}");
+        // A vowel before the break key leaves nothing to keep.
+        assert_eq!(render("ka`M").text, "\u{0C95}\u{0C82}");
+    }
+
+    #[test]
+    fn repeated_break_key_is_ignored() {
+        assert_eq!(typed("c``H"), typed("c`H"));
+        assert_eq!(typed("g```M"), "\u{A8F3}");
+        let mut e = Engine::new();
+        e.on_char('c');
+        e.on_char('`');
+        assert!(matches!(e.on_char('`'), Outcome::Consumed(ed) if ed.is_noop()));
+    }
+
+    #[test]
+    fn vedic_mode_off_turns_accents_and_agama_off() {
+        fn typed_plain(s: &str) -> String {
+            let mut sc = Screen::default();
+            sc.engine.set_vedic(false);
+            sc.type_str(s);
+            sc.s()
+        }
+        // Accent keys are ordinary characters.
+        assert_eq!(typed_plain("ka'"), "ಕ'");
+        assert_eq!(typed_plain("ka_"), "ಕ_");
+        assert_eq!(typed_plain("ka\""), "ಕ\"");
+        assert_eq!(typed_plain("ka^"), "ಕ^");
+        assert_eq!(typed_plain("don't"), "ದೊನ್'ತ್");
+        // No agama sign: the half letter is plain ಗ್ಂ.
+        assert_eq!(typed_plain("g`M"), "\u{0C97}\u{0CCD}\u{0C82}");
+        // Everything else is unchanged.
+        assert_eq!(typed_plain("namaste"), "ನಮಸ್ತೆ");
+        assert_eq!(typed_plain("kM"), "\u{0C95}\u{0C82}");
+        assert_eq!(typed_plain("c`H"), "\u{0C9A}\u{0CCD}\u{0C83}");
+        // Switching back on restores the accents.
+        let mut sc = Screen::default();
+        sc.engine.set_vedic(false);
+        sc.engine.set_vedic(true);
+        sc.type_str("ka'");
+        assert_eq!(sc.s(), format!("ಕ{U}"));
+    }
+
+    #[test]
+    fn new_capital_keys_and_old_spellings() {
+        for (new_, old, want) in [
+            ("Ka", "kha", "ಖ"),
+            ("Ga", "gha", "ಘ"),
+            ("Ja", "jha", "ಝ"),
+            ("THa", "Tha", "ಠ"),
+            ("DHa", "Dha", "ಢ"),
+            ("Pa", "pha", "ಫ"),
+            ("Ba", "bha", "ಭ"),
+            ("Sa", "sha", "ಶ"),
+        ] {
+            assert_eq!(typed(new_), want, "{new_}");
+            assert_eq!(typed(old), want, "{old}");
+        }
+        assert_eq!(typed("Sha"), "ಷ");
+        assert_eq!(typed("SHa"), "ಷ");
+        assert_eq!(typed("tha"), "ಥ"); // lowercase th / dh stay ಥ / ಧ
+        assert_eq!(typed("dha"), "ಧ");
+        assert_eq!(typed("Ta"), "ಟ");
+        assert_eq!(typed("Da"), "ಡ");
+        // A visarga after ಟ ಡ ಶ needs the vowel: the capital pairs are letters.
+        assert_eq!(typed("SaH"), "ಶಃ");
+        assert_eq!(typed("TaH"), "ಟಃ");
+        assert_eq!(typed("DaH"), "ಡಃ");
+        // Conjuncts through the new keys.
+        assert_eq!(typed("kSha"), "ಕ್ಷ");
+        assert_eq!(typed("Siva"), "ಶಿವ");
+    }
+
+    #[test]
+    fn short_spellings_for_vocalic_r() {
+        assert_eq!(render("Ru").text, "\u{0C8B}");
+        assert_eq!(render("RU").text, "\u{0CE0}");
+        assert_eq!(render("RRi").text, render("Ru").text);
+        assert_eq!(render("kRu").text, "\u{0C95}\u{0CC3}");
+        assert_eq!(render("kRU").text, "\u{0C95}\u{0CC4}");
+        assert_eq!(render("saMskRRita").text, render("saMskRuta").text);
     }
 }

@@ -34,15 +34,19 @@ What that means for you:
 1. Download `kannada-vedic-ime-vX.Y.Z-windows.zip` from the **Releases** page.
 2. Unzip, double-click `Kaveri.ttf` → Install, then double-click `kannada_ime.exe`.
 3. Pick the font **Kaveri** in your editor and type. `Ctrl+Shift+K` toggles.
+4. Right-click the tray icon for **Vedic mode** (accent keys and ꣳ on or off, remembered),
+   **Check for updates** and the quick reference.
 
-No install? Try the web typer (GitHub Pages, `docs/index.html`).
+No install? Try the web typer (GitHub Pages, `docs/index.html`). It also shows the text in
+IAST, plain English or Devanagari, converts pasted Devanagari, IAST or phonetic text to
+Kannada, and saves the result as a `.txt` file.
 
 ## Status — read this first
 
 | Part | State |
 |---|---|
-| `mapping.rs`, `engine.rs`, `guide.rs`, `state.rs`, `hook/filter.rs` | Dependency-free; **37 unit tests pass**; engine output verified NFC/NFD-stable over 20,000 random inputs |
-| `hook/win.rs`, `hook/linux.rs`, `inject.rs`, `tray.rs`, `main.rs` | Written against pinned crate versions but **not compiled or run by the author** (no crate access in the authoring sandbox). Expect small API fixes on first `cargo build`. Use the checklist in "Verify on Windows" below. |
+| `mapping.rs`, `engine.rs`, `guide.rs`, `state.rs`, `settings.rs`, `update.rs`, `hook/filter.rs` | Dependency-free; **50 unit tests pass**; engine output verified NFC/NFD-stable over thousands of random inputs |
+| `hook/win.rs`, `hook/linux.rs`, `inject.rs`, `tray.rs`, `main.rs` | Not compiled in the authoring sandbox (no crate access there); GitHub's CI builds them on Windows and Linux. The Windows hook, tray and update check have been used by hand only on one PC. Use the checklist in "Verify on Windows" below. |
 | Icons | ON icon is the Kannada letter ಕ (generated from the Kaveri font), OFF icon is "EN". Regenerate with `tools/make_icons.py --font <Kannada .ttf>`. |
 
 ## Layout
@@ -50,13 +54,16 @@ No install? Try the web typer (GitHub Pages, `docs/index.html`).
 ```
 Cargo.toml  build.rs  .cargo/config.toml
 docs/index.html  web typer (served by GitHub Pages)
+tools/web_typer_template.html  the web typer without its embedded font (build input)
 docs/GITHUB_SETUP.md  publishing steps
 .github/workflows  CI + release builds
 src/main.rs      CLI flags, wiring
 src/mapping.rs   Baraha + Vedic tables, lookup
 src/engine.rs    buffer → render → minimal Edit (+ tests)
 src/guide.rs     quick-reference HTML generated from the tables
-src/state.rs     ON/OFF flag + epoch shared by threads
+src/state.rs     ON/OFF + Vedic-mode flags, epoch, shared by threads
+src/settings.rs  Vedic mode + update check, remembered in a small text file
+src/update.rs    "newer release on GitHub?" (system curl, version compare)
 src/inject.rs    Edit → input (Unicode / clipboard strategies)
 src/hook/        win.rs (WH_KEYBOARD_LL + SendInput), linux.rs (rdev + enigo),
                  filter.rs (LLKHF_INJECTED loop guard, pure + tested)
@@ -72,16 +79,24 @@ TYPOGRAPHY.md    line spacing (Word/LibreOffice/CSS/Inkscape) + FontForge GPOS a
 
 ## Typing scheme (full tables: tray menu → quick reference)
 
-* Vowels `a aa/A i ii/I/ee u uu/U/oo RRi e E ai o O au`, `M` = ಂ, `H` = ಃ
-* Consonants as in Baraha (`k kh g gh ~g c ch j jh ~j T Th D Dh N t th d dh n p ph b bh m y r l v/w sh Sh s h L`), plus `x` = ಕ್ಷ, `jn` = ಜ್ಞ, `f` = ಫ಼
+* Vowels `a aa/A i ii/I/ee u uu/U/oo RRi/Ru RRI/RU e E ai o O au`, `M` = ಂ, `H` = ಃ
+* Consonants: `k K g G :g/~g c C j J :j/~j T TH D DH N t th d dh n p P b B m y r l L v/w S Sh/SH s h`
+  (capitals are the aspirates: `K` ಖ, `G` ಘ, `J` ಝ, `TH` ಠ, `DH` ಢ, `P` ಫ, `B` ಭ, `S` ಶ, `Sh`/`SH` ಷ),
+  plus `x` = ಕ್ಷ, `jn` = ಜ್ಞ, `f` = ಫ಼. The older spellings (`kh gh jh Th Dh ph bh sh`) still work.
+  `th` and `dh` stay ಥ and ಧ. A visarga after ಶ ಟ ಡ needs the vowel: `SaH`, `TaH`, `DaH`.
 * Conjuncts: just type the consonants (`tatva` → ತತ್ವ)
-* `` ` `` = break (`s`ha` → ಸ್ಹ, not ಶ)
+* `` ` `` = break (`s`ha` → ಸ್ಹ, not ಶ). On a German keyboard Shift + `´` is the break key without Space.
 * **Vedic accents**, typed right after the syllable:
   `'` or `^` → U+0951 Udatta · `_` or `\` → U+0952 Anudatta ·
   `"` or `^^` → U+1CDA double Svarita. Edit `ACCENTS` in `mapping.rs` to change.
 * **Anusvara is capital `M`** (U+0C82); `H` = visarga. Lowercase `m` stays ಮ, because
   making it an anusvara would break `namaste`, `amma`, `kamala`.
-* **Āgama anusvāra** (U+A8F3 ꣳ, already contains the ga): type `gM` (`gM'` → ꣳ + Udatta). With the vowel, `gaM` is ga + the ordinary anusvara ಗಂ. Other letters (`kM`) get the ordinary anusvara. `MM` alone also gives U+A8F3. Needs the tuned font from `tools/make_long_marks.py`.
+* **Full or half consonant before `M` / `H`:** `kM` → ಕಂ and `cH` → ಚಃ (full letter). Put the break key
+  in between for the half letter: `` k`M `` → ಕ್ಂ, `` c`H `` → ಚ್ಃ.
+* **Āgama anusvāra** (U+A8F3 ꣳ, already contains the ga): `` g`M `` (`` g`M' `` → ꣳ + Udatta), Vedic mode on.
+  Plain `gM` is ಗಂ like every other letter. Needs the tuned font from `tools/make_long_marks.py`.
+* **Vedic mode** (tray menu, on by default): switches the accent keys and ꣳ on or off. Off, the keys
+  `'` `"` `_` `^` type normally, so quotes and apostrophes work in poems and prose.
 * **Output order is always** base → matra → anusvara/visarga → Vedic mark, whatever
   order you typed: `ka'M` and `kaM'` both give ಕಂ॑. Stacked marks follow Unicode
   canonical order (U+0952 before U+0951/U+1CDA).
@@ -114,13 +129,12 @@ Open **PowerShell** in the project folder (the one containing `Cargo.toml`).
 ```powershell
 rustup default stable-x86_64-pc-windows-msvc   # needs Visual Studio Build Tools (C++ workload)
 cargo check                  # type-checks everything incl. the Win32 hook; fix any API drift here
-cargo test                   # 37 tests; the engine and filter tests run on any OS
+cargo test                   # 50 tests; the engine, settings, update and filter tests run on any OS
 cargo build --release        # -> target\release\kannada_ime.exe
 .\target\release\kannada_ime.exe
 ```
 
-Quick mapping check without hooks. Use the *debug* build for this, because the
-release `.exe` is a GUI-subsystem program and prints nothing to a console:
+Quick mapping check without hooks (works from a terminal with the release `.exe` too):
 
 ```powershell
 cargo run -- --translit "agni'mILE'"        # -> ಅಗ್ನಿ॑ಮೀಳೇ॑
@@ -130,7 +144,9 @@ Manual hook checklist (Notepad, then Word and a browser text box):
 
 1. Tray icon appears (saffron/ON). `Ctrl+Shift+K` → icon turns gray "EN", a toast
    appears; again → back to ON. Tray menu toggle does the same.
-2. In Notepad type `kannaDa ` → ಕನ್ನಡ. `agni'` → ಅಗ್ನಿ॑. `kaM'` → ಕಂ॑.
+2. In Notepad type `kannaDa ` → ಕನ್ನಡ. `agni'` → ಅಗ್ನಿ॑. `kaM'` → ಕಂ॑. `` c`H `` → ಚ್ಃ.
+   Tray menu → Vedic mode off: `ka'` now types ಕ' (a plain apostrophe).
+   German keyboard: Shift + `´` then `H` after `c` gives ಚ್ಃ, and AltGr + `+` (`~`) works in `~g`.
 3. **Loop guard:** type quickly for ten seconds. Output must not repeat or run on,
    and CPU in Task Manager stays near 0 %. (Own `SendInput` events carry
    `LLKHF_INJECTED` and are skipped by `hook/filter.rs`.)
@@ -149,6 +165,9 @@ sudo usermod -aG input $USER   # keyboard grab needs /dev/input + /dev/uinput; r
 strip target/release/kannada_ime   # already stripped by the release profile
 ```
 
+**The Linux agent is for US keyboard layouts only.** It reads the physical key position, so on a German
+keyboard Y and Z are swapped and AltGr counts as Alt. The planned IBus input method will fix this.
+
 Linux notes: capture works on X11 and Wayland (evdev), but synthetic Unicode
 injection depends on the compositor; if text does not appear, try
 `--inject clipboard`. Tray needs an AppIndicator-capable shell (GNOME needs the
@@ -159,9 +178,14 @@ AppIndicator extension). Long-term, an IBus/Fcitx5 engine is the better Linux de
 ```
 kannada_ime [--off] [--inject unicode|clipboard]
 kannada_ime --translit "namaste"        # test the mapping without any hooks
+kannada_ime --version
 ```
 
 Autostart on Windows: put a shortcut in `shell:startup`.
+
+Settings (Vedic mode, update check) are saved in `%APPDATA%\KannadaIME\settings.txt` on Windows and
+`~/.config/kannada-ime/settings.txt` on Linux. The update check asks GitHub once at startup (through the
+system `curl`) and only shows a notice; it never downloads or installs anything. Turn it off in the tray menu.
 
 ## Size / memory expectations (estimates, not measurements)
 
@@ -176,10 +200,10 @@ Manager / `ps` and trim with `--off` + fewer features if it matters.
 * Elevated (admin) windows ignore a non-elevated hook (UIPI) — run elevated.
 * `Ctrl+Shift+K` is swallowed system-wide (it is a Firefox DevTools shortcut).
 * Right after a mapped letter, `'` is an accent, so English contractions need the engine OFF.
-* **Keyboard layouts:** on layouts where `^`, `'` or `"` are *dead keys* (US-International,
-  German `^`) the hook sees no character and ignores them, and AltGr-only keys (such as `\`
-  on a German layout) count as Ctrl+Alt shortcuts. Use `'`, `"` and `_` (all reachable with
-  Shift on German and US layouts) for the accents.
+* **Keyboard layouts (Windows):** the grave and circumflex dead keys (German Shift + `´` and `^`) work as
+  the break and Udatta keys without Space, and AltGr characters such as `~` are typed normally. Other dead
+  keys (acute, diaeresis) keep their usual behaviour. `'`, `"` and `_` are reachable with Shift on German
+  and US layouts.
 * Not implemented: lowercase `m` as anusvara (conflicts with ಮ, see the typing scheme above).
 * Accent glyphs need a font carrying U+0951, U+0952, U+1CDA.
 * Toast sender may read "Windows PowerShell" until an AppUserModelID is registered by an installer.

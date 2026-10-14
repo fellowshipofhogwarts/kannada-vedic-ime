@@ -5,8 +5,8 @@ You need: a free GitHub account, the unzipped project folder, and (optional but 
 
 ## A. Prepare the folder (once)
 
-1. Use the project folder where `cargo build` already worked on your Windows PC.
-   It contains `Cargo.lock`, which belongs in the repository. Do not delete it.
+1. Use the project folder. (`Cargo.lock`, the list of exact dependency versions, is not in the
+   repository yet. See "Save Cargo.lock" at the end: you add it once.)
 2. Do **not** upload the `target` folder. The included `.gitignore` already skips it.
 3. `LICENSE-MIT` already carries your name.
 
@@ -42,7 +42,7 @@ A green tick means it passed. If it is red, click it and send me the error text.
 
 1. Repository page → **Releases → Draft a new release**.
 2. **Choose a tag** → type `v0.3.0` → **Create new tag**.
-3. Title `0.3.0`; paste the 0.3.0 section from `CHANGELOG.md`; click **Publish release**.
+3. Title `0.3.0`; paste that version's section from `CHANGELOG.md`; click **Publish release**.
 4. The **Release** workflow (Actions tab) builds `kannada_ime.exe` and attaches
    `kannada-vedic-ime-v0.3.0-windows.zip` to the release after about five minutes.
    That zip has the program, the Kaveri font, a one-page quick start and the licences.
@@ -51,7 +51,23 @@ A green tick means it passed. If it is red, click it and send me the error text.
 ## Later releases
 
 Change the version in `Cargo.toml`, add a section to `CHANGELOG.md`, commit and push in GitHub Desktop,
-then repeat step F with the next tag (`v0.3.1`, …).
+then repeat step F with the next tag (`v0.4.0`, …).
+
+### Releasing 0.4.0 (what to do with the new files)
+
+1. Close GitHub Desktop's repository view if it is open, then copy the new project files over your
+   repository folder (replace when asked). Do not delete `.git`.
+2. GitHub Desktop → **Changes** tab lists the changed files. Summary `Release 0.4.0` → **Commit to main** → **Push origin**.
+3. Actions tab: wait for the green tick on "CI". If it is red, send me the error text.
+4. Pages updates by itself after the push (about a minute): the web typer now has the converters.
+5. Releases → **Draft a new release** → tag `v0.4.0` → title `0.4.0` → paste the 0.4.0 section of
+   `CHANGELOG.md` → **Publish release**. The zip appears on the release page after about five minutes.
+
+### Save Cargo.lock (once, after the first green CI run)
+
+1. Actions tab → click the latest green "CI" run → scroll to **Artifacts** → download `Cargo.lock`.
+2. Unzip it and put `Cargo.lock` in the repository folder (next to `Cargo.toml`).
+3. GitHub Desktop → commit `Add Cargo.lock` → Push. From now on builds use exactly those versions.
 
 ## Good to know
 

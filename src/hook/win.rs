@@ -26,8 +26,9 @@ use windows_sys::Win32::System::Threading::{
 };
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, GetKeyboardLayout, SendInput, ToUnicodeEx, INPUT, INPUT_0, INPUT_KEYBOARD,
-    KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_LSHIFT,
-    VK_LWIN, VK_MENU, VK_NUMLOCK, VK_RSHIFT, VK_RWIN, VK_SCROLL, VK_SHIFT,
+    KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_LCONTROL,
+    VK_LMENU, VK_LSHIFT, VK_LWIN, VK_MENU, VK_NUMLOCK, VK_RCONTROL, VK_RMENU, VK_RSHIFT, VK_RWIN,
+    VK_SCROLL, VK_SHIFT,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetForegroundWindow, GetMessageW, GetWindowThreadProcessId,
@@ -145,6 +146,13 @@ fn win() -> bool {
     down(VK_LWIN) || down(VK_RWIN)
 }
 
+/// AltGr (German, French, … keyboards) is reported by Windows as Left-Ctrl and
+/// Right-Alt held together. That is *not* a shortcut: it is how characters such
+/// as `~ @ | { [ ] }` are typed. A real Ctrl or the left Alt key rules it out.
+fn altgr() -> bool {
+    down(VK_RMENU) && down(VK_LCONTROL) && !down(VK_RCONTROL) && !down(VK_LMENU)
+}
+
 fn is_pure_modifier(vk: u16) -> bool {
     matches!(
         vk,
@@ -153,12 +161,23 @@ fn is_pure_modifier(vk: u16) -> bool {
 }
 
 /// Resolve the character the user's layout would produce for this key, with
-/// **Caps Lock ignored** (only Shift counts) and without disturbing dead-key
-/// state (flag 0x4, Windows 10 1607+). `None` for non-character keys.
+/// **Caps Lock ignored** (only Shift, and AltGr when held, count) and without
+/// disturbing dead-key state (flag 0x4, Windows 10 1607+). `None` for
+/// non-character keys.
+///
+/// Dead keys: the *grave* and *circumflex* dead keys (German Shift+´ and ^)
+/// are returned as `` ` `` and `^`, so they work as the break key and the
+/// Udatta key without pressing Space. Other dead keys (acute, diaeresis, …)
+/// return `None` and keep their normal behaviour.
 fn translate(kb: &KBDLLHOOKSTRUCT) -> Option<char> {
     let mut state = [0u8; 256];
     if shift() {
         state[VK_SHIFT as usize] = 0x80;
+    }
+    if altgr() {
+        // ToUnicodeEx needs Ctrl+Alt in the key state to give the AltGr character.
+        state[VK_CONTROL as usize] = 0x80;
+        state[VK_MENU as usize] = 0x80;
     }
     let mut buf = [0u16; 4];
     // SAFETY: buffers are valid for the lengths passed.
@@ -176,8 +195,14 @@ fn translate(kb: &KBDLLHOOKSTRUCT) -> Option<char> {
     };
     if n == 1 {
         char::from_u32(buf[0] as u32).filter(|c| !c.is_control())
+    } else if n < 0 {
+        // Dead key: the spacing diacritic is stored in buf[0].
+        match char::from_u32(buf[0] as u32) {
+            Some(c @ ('`' | '^')) => Some(c),
+            _ => None,
+        }
     } else {
-        None // 0 = no char, <0 = dead key, >1 = sequence: not ours
+        None // 0 = no char, >1 = sequence: not ours
     }
 }
 
@@ -240,12 +265,15 @@ impl Ctx {
         if !self.state.is_active() {
             return false;
         }
+        self.engine.set_vedic(self.state.is_vedic());
 
         let vk16 = vk as u16;
         if is_pure_modifier(vk16) {
             return false; // pressing Shift mid-word must not end the word
         }
-        if ctrl() || alt() || win() {
+        // AltGr is Ctrl+Alt to Windows but it only *types* characters; real
+        // shortcuts (Ctrl+C, Alt+Tab, Win+…) still pass straight through.
+        if ((ctrl() || alt()) && !altgr()) || win() {
             self.engine.reset(); // shortcut: hands off
             return false;
         }
@@ -348,7 +376,15 @@ pub fn spawn(cfg: HookConfig) {
                 let kb = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), module, 0);
                 let ms = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_proc), module, 0);
                 if kb as usize == 0 {
-                    eprintln!("kannada_ime: SetWindowsHookExW(WH_KEYBOARD_LL) failed");
+                    if ms as usize != 0 {
+                        UnhookWindowsHookEx(ms); // do not leave half the hooks installed
+                    }
+                    (cfg.on_error)(
+                        "Windows refused the keyboard hook, so typing will not convert. \
+                         Close and reopen the program; if it keeps happening, security \
+                         software may be blocking it."
+                            .into(),
+                    );
                     return;
                 }
                 let mut msg: MSG = std::mem::zeroed();

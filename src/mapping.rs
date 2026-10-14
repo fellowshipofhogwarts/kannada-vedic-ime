@@ -41,8 +41,8 @@ pub static VOWELS: &[(&[&str], char, Option<char>)] = &[
     (&["ii", "I", "ee"], '\u{0C88}', Some('\u{0CC0}')),
     (&["u"], '\u{0C89}', Some('\u{0CC1}')),
     (&["uu", "U", "oo"], '\u{0C8A}', Some('\u{0CC2}')),
-    (&["RRi"], '\u{0C8B}', Some('\u{0CC3}')),
-    (&["RRI"], '\u{0CE0}', Some('\u{0CC4}')),
+    (&["RRi", "Ru"], '\u{0C8B}', Some('\u{0CC3}')),
+    (&["RRI", "RU"], '\u{0CE0}', Some('\u{0CC4}')),
     (&["e"], '\u{0C8E}', Some('\u{0CC6}')),
     (&["E"], '\u{0C8F}', Some('\u{0CC7}')),
     (&["ai"], '\u{0C90}', Some('\u{0CC8}')),
@@ -55,19 +55,19 @@ pub static VOWELS: &[(&[&str], char, Option<char>)] = &[
 /// Multi-code-point values are legitimate: ksha, jna, nukta forms.
 pub static CONSONANTS: &[(&[&str], &str)] = &[
     (&["k"], "\u{0C95}"),
-    (&["kh"], "\u{0C96}"),
+    (&["K", "kh"], "\u{0C96}"),
     (&["g"], "\u{0C97}"),
-    (&["gh"], "\u{0C98}"),
-    (&["~g"], "\u{0C99}"),
+    (&["G", "gh"], "\u{0C98}"),
+    (&["~g", ":g"], "\u{0C99}"),
     (&["c", "ch"], "\u{0C9A}"),
     (&["C", "Ch", "chh"], "\u{0C9B}"),
     (&["j"], "\u{0C9C}"),
-    (&["jh"], "\u{0C9D}"),
-    (&["~j"], "\u{0C9E}"),
+    (&["J", "jh"], "\u{0C9D}"),
+    (&["~j", ":j"], "\u{0C9E}"),
     (&["T"], "\u{0C9F}"),
-    (&["Th"], "\u{0CA0}"),
+    (&["TH", "Th"], "\u{0CA0}"),
     (&["D"], "\u{0CA1}"),
-    (&["Dh"], "\u{0CA2}"),
+    (&["DH", "Dh"], "\u{0CA2}"),
     (&["N"], "\u{0CA3}"),
     (&["t"], "\u{0CA4}"),
     (&["th"], "\u{0CA5}"),
@@ -75,17 +75,17 @@ pub static CONSONANTS: &[(&[&str], &str)] = &[
     (&["dh"], "\u{0CA7}"),
     (&["n"], "\u{0CA8}"),
     (&["p"], "\u{0CAA}"),
-    (&["ph"], "\u{0CAB}"),
+    (&["P", "ph"], "\u{0CAB}"),
     (&["b"], "\u{0CAC}"),
-    (&["bh"], "\u{0CAD}"),
+    (&["B", "bh"], "\u{0CAD}"),
     (&["m"], "\u{0CAE}"),
     (&["y"], "\u{0CAF}"),
     (&["r"], "\u{0CB0}"),
     (&["l"], "\u{0CB2}"),
     (&["L"], "\u{0CB3}"),
     (&["v", "w"], "\u{0CB5}"),
-    (&["sh"], "\u{0CB6}"),
-    (&["S", "Sh"], "\u{0CB7}"),
+    (&["S", "sh"], "\u{0CB6}"),
+    (&["Sh", "SH"], "\u{0CB7}"),
     (&["s"], "\u{0CB8}"),
     (&["h"], "\u{0CB9}"),
     // Conjunct shortcuts (virama is part of the cluster string).
@@ -99,10 +99,11 @@ pub static CONSONANTS: &[(&[&str], &str)] = &[
 pub static SIGNS: &[(&[&str], char)] = &[(&["M"], ANUSVARA), (&["H"], VISARGA)];
 
 /// Agama anusvara U+A8F3 (a Devanagari-block sign that Vedic Kannada texts use).
-/// It behaves like a letter, so a Vedic mark typed after it attaches to it.
-/// Needs a font that positions marks on it (see TYPOGRAPHY.md, Goda fix).
+/// It already contains the ga. The engine produces it only from the keys
+/// `g`, break key, `M` while Vedic mode is on (see engine.rs); it has no
+/// spelling of its own. A Vedic mark typed after it attaches to it. Needs a font
+/// that positions marks on it (see TYPOGRAPHY.md, Goda fix).
 pub const AGAMA_ANUSVARA: char = '\u{A8F3}';
-pub static AGAMA: &[(&[&str], char)] = &[(&["MM"], AGAMA_ANUSVARA)];
 
 /// (trigger spellings, combining mark, display name).
 ///
@@ -136,7 +137,8 @@ pub fn combining_class(c: char) -> u8 {
 }
 
 /// Segmentation break: consumed, emits nothing, but stops the next letters from
-/// merging into the previous token (`s`h` = ಸ್ಹ instead of ಶ).
+/// merging into the previous token (`s`h` = ಸ್ಹ instead of ಶ). Before `M` or `H`
+/// it keeps the half consonant (`c`H` = ಚ್ಃ).
 pub const BREAK_KEY: &str = "`";
 
 // ---------------------------------------------------------------------------
@@ -151,7 +153,6 @@ pub enum Tok {
     },
     Consonant(&'static str),
     Sign(char),
-    Agama(char),
     Accent(char),
     Break,
 }
@@ -191,11 +192,6 @@ pub fn table() -> &'static HashMap<&'static str, Tok> {
         for (keys, sign) in SIGNS {
             for k in *keys {
                 put(k, Tok::Sign(*sign));
-            }
-        }
-        for (keys, ch) in AGAMA {
-            for k in *keys {
-                put(k, Tok::Agama(*ch));
             }
         }
         for (keys, mark, _) in ACCENTS {
@@ -240,9 +236,9 @@ mod tests {
 
     #[test]
     fn table_builds_without_duplicates() {
-        // 19 vowel + 42 consonant (incl. x, jn, f) + 2 sign + 6 accent + 1 break
+        // 21 vowel + 52 consonant (incl. x, jn, f) + 2 sign + 6 accent + 1 break
         // spellings. Update this number when you edit the tables.
-        assert_eq!(table().len(), 71);
+        assert_eq!(table().len(), 82);
     }
 
     #[test]
@@ -262,14 +258,14 @@ mod tests {
 
     #[test]
     fn key_classes() {
-        for c in "kgRaAMH~`xjSsfT".chars() {
+        for c in "kgRaAMH~:`xjSsfTKGJPB".chars() {
             assert!(is_phonetic_key(c), "{c} should be phonetic");
         }
         for c in "'\"^_\\".chars() {
             assert!(is_accent_key(c), "{c} should be an accent key");
             assert!(!is_phonetic_key(c), "{c} must not be phonetic");
         }
-        for c in " 1.,?!QqZzBKPWYXGFJV".chars() {
+        for c in " 1.,?!;QqZzWYXFV".chars() {
             assert!(!is_phonetic_key(c), "{c:?} should pass through");
         }
     }

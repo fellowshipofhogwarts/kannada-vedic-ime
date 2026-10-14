@@ -1,0 +1,492 @@
+<title>Kannada Vedic Typer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one working column. Switch + editor first, live inspector beside examples, reference last. */
+@font-face{font-family:"KVL";src:url(data:font/ttf;base64,__FONT__) format("truetype");font-display:block}
+:root{
+  --bg:#f2f3f6;--surface:#ffffff;--fg:#1a1d25;--muted:#5a6270;--line:#d8dbe2;
+  --accent:#b8500a;--accent-ink:#ffffff;--soft:#fbeadb;--ok:#1f7a45;--off:#8a909c;
+  --ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --kn:"KVL","Noto Sans Kannada","Nirmala UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13151a;--surface:#1b1e25;--fg:#e8eaee;--muted:#98a0ad;--line:#2b303a;
+  --accent:#f0933f;--accent-ink:#1a1204;--soft:#3a2616;--ok:#5cc489;--off:#6f7683;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13151a;--surface:#1b1e25;--fg:#e8eaee;--muted:#98a0ad;--line:#2b303a;
+  --accent:#f0933f;--accent-ink:#1a1204;--soft:#3a2616;--ok:#5cc489;--off:#6f7683;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--ui);padding-inline:16px;padding-block:20px 48px}
+main{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:1.35rem;font-weight:600;margin:0;text-wrap:balance}
+header p{margin:2px 0 0;color:var(--muted);font-size:.9rem}
+.switch{display:flex;align-items:center;gap:10px;font-weight:500}
+button{font:inherit;color:inherit;cursor:pointer}
+.toggle{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px 6px 8px;display:flex;align-items:center;gap:8px}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--off)}
+.toggle[aria-pressed="true"] .dot{background:var(--ok)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea{width:100%;min-height:210px;resize:vertical;border:1px solid var(--line);background:var(--surface);color:var(--fg);
+  border-radius:8px;padding:14px 16px;font:34px/1.9 var(--kn)}
+textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--soft)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:700px){.row{grid-template-columns:minmax(0,1fr)}}
+section{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:0;align-items:baseline}
+dt{color:var(--muted);font-size:.85rem}
+dd{margin:0;font-family:var(--mono);font-size:.9rem;overflow-wrap:anywhere;min-height:1.4em}
+dd.kn{font-family:var(--kn);font-size:1.6rem;line-height:2}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:6px 10px;display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left}
+.chip:hover{border-color:var(--accent)}
+.chip code{font:12px var(--mono);color:var(--muted)}
+.chip span{font:24px/1.8 var(--kn)}
+.note{color:var(--muted);font-size:.85rem;margin:10px 0 0}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+summary{cursor:pointer;font-weight:600}
+.tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:14px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th{text-align:left;color:var(--muted);font-weight:500;padding:3px 8px 3px 0;border-bottom:1px solid var(--line)}
+td{padding:2px 8px 2px 0;font-family:var(--mono)}
+td.kn{font-family:var(--kn);font-size:1.35rem;line-height:1.9}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+.bar button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 12px}
+.bar button:hover{border-color:var(--accent)}
+.theme{margin-left:auto}
+.tr-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.tr-head h2{margin:0}
+.tr-head .ctl{display:flex;gap:8px;align-items:center}
+select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.tr-head button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 12px}
+.tr-head button:hover{border-color:var(--accent)}
+#trOut{min-height:3.2em;font:20px/1.7 var(--ui);white-space:pre-wrap;overflow-wrap:anywhere}
+#trOut.deva{font-family:var(--kn);font-size:28px;line-height:1.9}
+details.cv summary{margin-bottom:0}
+.cv-body{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.cv-body textarea{min-height:110px;font:16px/1.6 var(--mono);padding:10px 12px}
+#cvOut{min-height:3.2em;font:28px/1.9 var(--kn);white-space:pre-wrap;overflow-wrap:anywhere}
+.cv-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cv-ctl button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 12px}
+.cv-ctl button:hover{border-color:var(--accent)}
+</style>
+
+<main>
+  <header>
+    <div>
+      <h1>Kannada Vedic Typer</h1>
+      <p>Type phonetic English in the box. The same engine as the desktop agent, running in your browser.</p>
+    </div>
+    <div class="switch">
+      <button class="toggle" id="vedic" type="button" aria-pressed="true"><span class="dot"></span><span id="vedicLabel">Vedic mode ON</span></button>
+      <button class="toggle" id="power" type="button" aria-pressed="true"><span class="dot"></span><span id="powerLabel">Kannada ON</span></button>
+    </div>
+  </header>
+
+  <textarea id="ta" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Typing area"
+    placeholder="Type here, for example: agni'mILE'"></textarea>
+
+  <div class="bar">
+    <button type="button" id="clear">Clear</button>
+    <button type="button" id="copy">Copy text</button>
+    <button type="button" id="save">Save text (.txt)</button>
+    <button type="button" id="theme" class="theme">Theme: auto</button>
+  </div>
+
+  <section aria-live="polite" id="trSec">
+    <div class="tr-head">
+      <h2>Transliteration</h2>
+      <div class="ctl">
+        <label for="trMode" class="note" style="margin:0">Show as</label>
+        <select id="trMode">
+          <option value="iast">IAST (scholarly)</option>
+          <option value="simple">Simple English</option>
+          <option value="deva">Devanagari</option>
+        </select>
+        <button type="button" id="trCopy">Copy</button>
+        <button type="button" id="trSave">Save (.txt)</button>
+      </div>
+    </div>
+    <div id="trOut">–</div>
+    <p class="note" id="trNote"></p>
+  </section>
+
+  <details class="cv" id="cv">
+    <summary>Convert text to Kannada (paste Devanagari, IAST or phonetic English)</summary>
+    <div class="cv-body">
+      <div class="cv-ctl">
+        <label for="cvMode" class="note" style="margin:0">Pasted text is</label>
+        <select id="cvMode">
+          <option value="deva">Devanagari</option>
+          <option value="iast">IAST (with diacritics)</option>
+          <option value="phon">Phonetic English (as you would type it)</option>
+        </select>
+        <select id="cvEo" aria-label="Meaning of e and o in IAST">
+          <option value="long">e, o are long, as in Sanskrit</option>
+          <option value="short">e, o are short (ISO 15919: ē, ō are long)</option>
+        </select>
+      </div>
+      <textarea id="cvIn" spellcheck="false" aria-label="Text to convert" placeholder="Paste here, for example: अग्नि॑मीळे॑ पुरोहितं   or   agním īḷe purohitaṃ"></textarea>
+      <div id="cvOut" aria-live="polite">–</div>
+      <div class="cv-ctl">
+        <button type="button" id="cvCopy">Copy</button>
+        <button type="button" id="cvSave">Save (.txt)</button>
+        <button type="button" id="cvUse">Put in the typing box</button>
+      </div>
+      <p class="note" id="cvNote"></p>
+    </div>
+  </details>
+
+  <div class="row">
+    <section aria-live="polite">
+      <h2>Live inspector</h2>
+      <dl>
+        <dt>Keys in this word</dt><dd id="iBuf">–</dd>
+        <dt>Shown</dt><dd id="iShown" class="kn">–</dd>
+        <dt>Last edit</dt><dd id="iEdit">–</dd>
+        <dt>Code points</dt><dd id="iCp">–</dd>
+      </dl>
+      <p class="note">Backspace removes the last key you typed, not the last letter. Space, Enter, arrows and clicks end the word.</p>
+    </section>
+    <section>
+      <h2>Try these</h2>
+      <div class="chips" id="chips"></div>
+      <p class="note">Click one to type it for you.</p>
+    </section>
+  </div>
+
+  <details open>
+    <summary>Keys and accents</summary>
+    <div class="tables" id="tables"></div>
+    <p class="note">Marks always end up in this order: letter, vowel sign, anusvara or visarga, Vedic mark. Capital <code>M</code> is the anusvara, lowercase <code>m</code> stays ಮ. A consonant followed by <code>M</code> or <code>H</code> gives the full letter plus the sign (<code>kM</code> = ಕಂ). Put the break key in between to keep the half letter: <code>c`H</code> = ಚ್ಃ. With Vedic mode on, <code>g`M</code> gives the single āgama anusvāra ꣳ (U+A8F3). Vedic mode off turns off the three accent keys and ꣳ, so quotes and apostrophes type normally. New capital keys: K G J P B S TH DH Sh. <code>:g</code> and <code>:j</code> give ಙ and ಞ without the tilde. The font is a modified copy of Goda (SIL Open Font License), renamed Kaveri, embedded in this page.</p>
+  </details>
+</main>
+
+<script>
+/* ---------- tables (same as mapping.rs) ---------- */
+const VIRAMA="\u0CCD",ANUSVARA="\u0C82",VISARGA="\u0C83",UDATTA="\u0951",ANUDATTA="\u0952",DSV="\u1CDA",AGAMA="\uA8F3";
+const c=h=>String.fromCharCode(h);
+const VOWELS=[[["a"],c(0xC85),null],[["aa","A"],c(0xC86),c(0xCBE)],[["i"],c(0xC87),c(0xCBF)],[["ii","I","ee"],c(0xC88),c(0xCC0)],
+[["u"],c(0xC89),c(0xCC1)],[["uu","U","oo"],c(0xC8A),c(0xCC2)],[["RRi","Ru"],c(0xC8B),c(0xCC3)],[["RRI","RU"],c(0xCE0),c(0xCC4)],
+[["e"],c(0xC8E),c(0xCC6)],[["E"],c(0xC8F),c(0xCC7)],[["ai"],c(0xC90),c(0xCC8)],[["o"],c(0xC92),c(0xCCA)],
+[["O"],c(0xC93),c(0xCCB)],[["au"],c(0xC94),c(0xCCC)]];
+const CONS=[[["k"],0xC95],[["K","kh"],0xC96],[["g"],0xC97],[["G","gh"],0xC98],[["~g",":g"],0xC99],[["c","ch"],0xC9A],[["C","Ch","chh"],0xC9B],
+[["j"],0xC9C],[["J","jh"],0xC9D],[["~j",":j"],0xC9E],[["T"],0xC9F],[["TH","Th"],0xCA0],[["D"],0xCA1],[["DH","Dh"],0xCA2],[["N"],0xCA3],
+[["t"],0xCA4],[["th"],0xCA5],[["d"],0xCA6],[["dh"],0xCA7],[["n"],0xCA8],[["p"],0xCAA],[["P","ph"],0xCAB],[["b"],0xCAC],
+[["B","bh"],0xCAD],[["m"],0xCAE],[["y"],0xCAF],[["r"],0xCB0],[["l"],0xCB2],[["L"],0xCB3],[["v","w"],0xCB5],[["S","sh"],0xCB6],
+[["Sh","SH"],0xCB7],[["s"],0xCB8],[["h"],0xCB9]].map(([k,h])=>[k,c(h)]);
+CONS.push([["x"],c(0xC95)+VIRAMA+c(0xCB7)],[["jn"],c(0xC9C)+VIRAMA+c(0xC9E)],[["f"],c(0xCAB)+c(0xCBC)]);
+const SIGNS=[[["M"],ANUSVARA],[["H"],VISARGA]];
+const AGAMAS=[]; /* MM no longer special: the agama sign comes only from g`M (Vedic mode) */
+const ACCENTS=[[["'","^"],UDATTA,"Udatta"],[["_","\\"],ANUDATTA,"Anudatta"],[['"',"^^"],DSV,"Svarita / double svarita"]];
+const BREAK="`";
+const ccc=ch=>ch===UDATTA||ch===DSV?230:ch===ANUDATTA?220:0;
+const isMark=ch=>ch===UDATTA||ch===ANUDATTA||ch===DSV;
+
+const TABLE=new Map();
+for(const [ks,i,m] of VOWELS)for(const k of ks)TABLE.set(k,{t:"v",i,m});
+for(const [ks,cl] of CONS)for(const k of ks)TABLE.set(k,{t:"c",cl});
+for(const [ks,s] of SIGNS)for(const k of ks)TABLE.set(k,{t:"s",s});
+for(const [ks,s] of AGAMAS)for(const k of ks)TABLE.set(k,{t:"g",s});
+for(const [ks,mk] of ACCENTS)for(const k of ks)TABLE.set(k,{t:"a",mk});
+TABLE.set(BREAK,{t:"b"});
+const FIRST=new Set([...TABLE.keys()].map(k=>k[0]));
+const ACC_FIRST=new Set(ACCENTS.flatMap(([ks])=>ks.map(k=>k[0])));
+let vedic=true;
+const isFirst=ch=>FIRST.has(ch)&&(vedic||!ACC_FIRST.has(ch));
+const lookup=k=>{const t=TABLE.get(k);return t&&!vedic&&(t.t==="a"||t.t==="g")?null:t};
+
+/* ---------- render (same rules as engine.rs) ---------- */
+function marksStart(a){let s=a.length;for(let i=a.length-1;i>=0&&isMark(a[i]);i--)s=i;return s}
+function render(roman){
+  const out=[];let pending=false,attach=false,afterBreak=false;
+  const cps=Array.from(roman);let i=0;
+  while(i<cps.length){
+    let hit=null,len=0;
+    for(let l=3;l>=1;l--){if(i+l<=cps.length){const t=lookup(cps.slice(i,i+l).join(""));if(t){hit=t;len=l;break}}}
+    if(!hit){out.push(cps[i]);pending=attach=afterBreak=false;i++;continue}
+    switch(hit.t){
+      case"c":out.push(...hit.cl,VIRAMA);pending=true;attach=true;afterBreak=false;break;
+      case"v":
+        if(pending&&!afterBreak){out.pop();if(hit.m)out.push(hit.m)}else out.push(hit.i);
+        pending=false;attach=true;afterBreak=false;break;
+      case"s":
+        if(pending){
+          if(afterBreak){
+            const ga=vedic&&hit.s===ANUSVARA&&out.length>=2&&out[out.length-2]==="\u0C97";
+            if(ga){out.pop();out.pop();out.push(AGAMA)}else out.push(hit.s);
+          }else{out.pop();out.push(hit.s)}
+        }else out.splice(marksStart(out),0,hit.s);
+        pending=false;attach=true;afterBreak=false;break;
+      case"g":
+        if(pending){const ga=out.length>=2&&out[out.length-2]==="\u0C97";out.pop();if(ga)out.pop()}
+        out.push(hit.s);pending=false;attach=true;afterBreak=false;break;
+      case"a":
+        if(attach){
+          if(pending){out.pop();pending=false}
+          out.push(hit.mk);
+          const st=marksStart(out),mk=out.splice(st).sort((a,b)=>ccc(a)-ccc(b));out.push(...mk);
+        }else{out.push(...cps.slice(i,i+len));pending=false}
+        afterBreak=false;break;
+      case"b":afterBreak=true;break;
+    }
+    i+=len;
+  }
+  return out.join("");
+}
+function diff(a,b){
+  const x=Array.from(a),y=Array.from(b);let n=0;
+  while(n<x.length&&n<y.length&&x[n]===y[n])n++;
+  return{back:x.length-n,text:y.slice(n).join("")};
+}
+
+/* ---------- transliteration (Kannada script -> Latin / Devanagari) ---------- */
+const TR_V={0xC85:["a","a"],0xC86:["ā","aa"],0xC87:["i","i"],0xC88:["ī","ee"],0xC89:["u","u"],0xC8A:["ū","oo"],0xC8B:["ṛ","ru"],0xCE0:["ṝ","ruu"],0xC8C:["l̥","lu"],
+ 0xC8E:["e","e"],0xC8F:["ē","e"],0xC90:["ai","ai"],0xC92:["o","o"],0xC93:["ō","o"],0xC94:["au","au"]};
+const TR_M={0xCBE:0xC86,0xCBF:0xC87,0xCC0:0xC88,0xCC1:0xC89,0xCC2:0xC8A,0xCC3:0xC8B,0xCC4:0xCE0,0xCC6:0xC8E,0xCC7:0xC8F,0xCC8:0xC90,0xCCA:0xC92,0xCCB:0xC93,0xCCC:0xC94};
+const TR_C={0xC95:["k","k"],0xC96:["kh","kh"],0xC97:["g","g"],0xC98:["gh","gh"],0xC99:["ṅ","ng"],0xC9A:["c","ch"],0xC9B:["ch","chh"],0xC9C:["j","j"],0xC9D:["jh","jh"],
+ 0xC9E:["ñ","ny"],0xC9F:["ṭ","t"],0xCA0:["ṭh","th"],0xCA1:["ḍ","d"],0xCA2:["ḍh","dh"],0xCA3:["ṇ","n"],0xCA4:["t","t"],0xCA5:["th","th"],0xCA6:["d","d"],
+ 0xCA7:["dh","dh"],0xCA8:["n","n"],0xCAA:["p","p"],0xCAB:["ph","ph"],0xCAC:["b","b"],0xCAD:["bh","bh"],0xCAE:["m","m"],0xCAF:["y","y"],0xCB0:["r","r"],
+ 0xCB1:["ṟ","r"],0xCB2:["l","l"],0xCB3:["ḷ","l"],0xCB5:["v","v"],0xCB6:["ś","sh"],0xCB7:["ṣ","sh"],0xCB8:["s","s"],0xCB9:["h","h"],0xCDE:["ḻ","zh"]};
+const TR_DIG="0123456789";
+function translit(text,mode){
+  const cps=Array.from(text).map(ch=>ch.codePointAt(0));
+  if(mode==="deva"){
+    return cps.map(x=>{
+      if(x===0xCDE)return String.fromCodePoint(x);
+      return x>=0xC80&&x<=0xCEF?String.fromCodePoint(x-0x380):String.fromCodePoint(x);
+    }).join("");
+  }
+  const k=mode==="simple"?1:0,out=[];let lastV=-1,i=0;
+  const pushV=code=>{out.push(TR_V[code][k]);lastV=out.length-1};
+  while(i<cps.length){
+    const x=cps[i];
+    if(TR_C[x]){
+      out.push(TR_C[x][k]);const ci=out.length-1;i++;
+      if(cps[i]===0xCBC){if(x===0xCAB)out[ci]="f";else if(x===0xC9C)out[ci]="z";i++}
+      if(cps[i]===0xCCD){i++}
+      else if(TR_M[cps[i]]){pushV(TR_M[cps[i]]);i++}
+      else{pushV(0xC85)}
+      continue;
+    }
+    if(TR_V[x]){pushV(x);i++;continue}
+    if(x===0xC82){out.push(k?"m":"ṃ");i++;continue}
+    if(x===0xC83){out.push(k?"h":"ḥ");i++;continue}
+    if(x===0xC81){out.push(k?"m":"m̐");i++;continue}
+    if(x===0xA8F3){out.push(k?"gm":"gm̐");i++;continue}
+    if(x===0xCBD){out.push("’");i++;continue}
+    if(x>=0xCE6&&x<=0xCEF){out.push(TR_DIG[x-0xCE6]);i++;continue}
+    if(x===0x951||x===0x952||x===0x1CDA){
+      if(!k&&lastV>=0)out[lastV]+=(x===0x951?"́":x===0x952?"̱":"̋");
+      i++;continue;
+    }
+    out.push(String.fromCodePoint(x));lastV=-1;i++;
+  }
+  return out.join("");
+}
+const TR_NOTES={
+  iast:"IAST / ISO 15919 style: ē and ō are kept apart from e and o. Vedic marks sit on the vowel: acute (´) for the upper mark, underline for the lower mark, double acute for the double svarita.",
+  simple:"Plain letters only, no accents: ā = aa, ī = ee, ū = oo, ṛ = ru, ś and ṣ = sh. Vedic marks are left out.",
+  deva:"Each Kannada letter is swapped for the matching Devanagari letter. Vedic marks are kept."};
+function updateTr(){
+  const m=document.getElementById("trMode").value,o=document.getElementById("trOut");
+  const v=document.getElementById("ta").value;
+  o.textContent=v?translit(v,m):"–";o.classList.toggle("deva",m==="deva");
+  document.getElementById("trNote").textContent=TR_NOTES[m];
+}
+
+/* ---------- convert pasted text to Kannada ---------- */
+const KN=/\p{Script=Kannada}/u;
+function devaToKannada(text){
+  return Array.from(text).map(ch=>{
+    const x=ch.codePointAt(0);
+    const ok=(x>=0x901&&x<=0x963&&!(x>=0x958&&x<=0x95F))||(x>=0x966&&x<=0x96F);
+    if(ok){const y=String.fromCodePoint(x+0x380);if(KN.test(y))return y}
+    return ch;
+  }).join("");
+}
+const I_M=Object.fromEntries(Object.entries(TR_M).map(([m,v])=>[v,Number(m)]));
+const I_V={"a":0xC85,"ā":0xC86,"i":0xC87,"ī":0xC88,"u":0xC89,"ū":0xC8A,"ṛ":0xC8B,"ṝ":0xCE0,"ē":0xC8F,"ō":0xC93,"ai":0xC90,"au":0xC94};
+const I_C={"k":0xC95,"kh":0xC96,"g":0xC97,"gh":0xC98,"ṅ":0xC99,"c":0xC9A,"ch":0xC9B,"j":0xC9C,"jh":0xC9D,"ñ":0xC9E,"ṭ":0xC9F,"ṭh":0xCA0,"ḍ":0xCA1,"ḍh":0xCA2,"ṇ":0xCA3,
+ "t":0xCA4,"th":0xCA5,"d":0xCA6,"dh":0xCA7,"n":0xCA8,"p":0xCAA,"ph":0xCAB,"b":0xCAC,"bh":0xCAD,"m":0xCAE,"y":0xCAF,"r":0xCB0,"ṟ":0xCB1,"l":0xCB2,"ḷ":0xCB3,"v":0xCB5,
+ "ś":0xCB6,"ṣ":0xCB7,"s":0xCB8,"h":0xCB9,"ḻ":0xCDE};
+const I_FIX={"á":"á","é":"é","í":"í","ó":"ó","ú":"ú","à":"à","è":"è","ì":"ì","ò":"ò","ù":"ù",
+ "ḗ":"ḗ","ṓ":"ṓ","ḕ":"ḕ","ṑ":"ṑ","ṁ":"ṃ"};
+const I_ACC={0x301:UDATTA,0x300:ANUDATTA,0x331:ANUDATTA,0x30B:DSV};
+function iastToKannada(text,eoLong){
+  let t=text.normalize("NFC").toLowerCase().replace(/r\u0325\u0304|ṝ/g,"ṝ").replace(/r\u0325/g,"ṛ"); /* r with ring below = ṛ */
+  t=Array.from(t).map(ch=>I_FIX[ch]||ch).join("");
+  const cps=Array.from(t),out=[];let pending=false,marks=[];
+  const flush=()=>{if(marks.length){marks.sort((a,b)=>ccc(a)-ccc(b));out.push(...marks);marks=[]}};
+  const endC=()=>{if(pending){out.push(VIRAMA);pending=false}};
+  const vowel=code=>{flush();if(pending){pending=false;const m=I_M[code];if(m)out.push(c(m))}else out.push(c(code))};
+  let i=0;
+  while(i<cps.length){
+    const ch=cps[i],nx=cps[i+1]||"",two=ch+nx,x=ch.codePointAt(0);
+    if(I_ACC[x]){if(pending)endC();marks.push(I_ACC[x]);i++;continue}
+    if(x===0x310){i++;continue}
+    if(ch==="g"&&nx==="m"&&cps[i+2]==="̐"){flush();endC();out.push(AGAMA);i+=3;continue}
+    if(ch==="m"&&nx==="̐"){flush();endC();out.push(c(0xC81));i+=2;continue}
+    if(ch==="ṃ"){endC();out.push(ANUSVARA);i++;continue}
+    if(ch==="ḥ"){endC();out.push(VISARGA);i++;continue}
+    if(two==="ai"||two==="au"){vowel(I_V[two]);i+=2;continue}
+    if(ch==="e"){vowel(eoLong?0xC8F:0xC8E);i++;continue}
+    if(ch==="o"){vowel(eoLong?0xC93:0xC92);i++;continue}
+    if(I_V[ch]){vowel(I_V[ch]);i++;continue}
+    if(I_C[two]){flush();endC();out.push(c(I_C[two]));pending=true;i+=2;continue}
+    if(I_C[ch]){flush();endC();out.push(c(I_C[ch]));pending=true;i++;continue}
+    flush();endC();out.push(ch);i++;
+  }
+  flush();endC();
+  return out.join("");
+}
+const CV_NOTES={
+  deva:"Each Devanagari letter is swapped for the matching Kannada letter. Vedic marks stay as they are. Letters that Kannada does not have are left unchanged.",
+  iast:"A consonant with no vowel after it gets the virama (half letter). Acute (´) becomes the upper Vedic mark, grave or underline the lower mark, double acute the double svarita. gm̐ becomes ꣳ.",
+  phon:"Runs the same engine as the typing box on the whole text, so capital letters matter: T = ಟ, t = ತ. Apostrophes after a letter become Vedic marks (turn Vedic mode off to avoid that)."};
+function convertText(txt,mode){
+  if(mode==="deva")return devaToKannada(txt);
+  if(mode==="iast")return iastToKannada(txt,document.getElementById("cvEo").value==="long");
+  return render(txt);
+}
+function updateCv(){
+  const m=document.getElementById("cvMode").value,v=document.getElementById("cvIn").value;
+  document.getElementById("cvEo").hidden=m!=="iast";
+  document.getElementById("cvOut").textContent=v?convertText(v,m):"–";
+  document.getElementById("cvNote").textContent=CV_NOTES[m];
+}
+/* ---------- saving text files ---------- */
+async function saveText(name,text){
+  if(!text||text==="–")return false;
+  try{
+    if(window.claude&&window.claude.use){
+      const d=await window.claude.use("downloads");
+      if(d){await d.save({filename:name,data:text});return true}
+    }
+  }catch(e){if(e&&e.code==="declined")return false}
+  try{
+    const u=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));
+    const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),2000);return true;
+  }catch(e){return false}
+}
+function flash(btn,label,ms){const old=btn.dataset.label||btn.textContent;btn.dataset.label=old;btn.textContent=label;setTimeout(()=>btn.textContent=old,ms||1600)}
+
+/* ---------- editor ---------- */
+const $=s=>document.querySelector(s);
+const ta=$("#ta");let buf="",shown="",on=true;
+const cp=s=>Array.from(s).map(ch=>"U+"+ch.codePointAt(0).toString(16).toUpperCase().padStart(4,"0")).join(" ");
+function inspect(edit){
+  $("#iBuf").textContent=buf||"–";
+  $("#iShown").textContent=shown||"–";
+  $("#iEdit").textContent=edit?(edit.back?"⌫×"+edit.back+" ":"")+(edit.text?"+ "+edit.text:""):"–";
+  $("#iCp").textContent=shown?cp(shown):"–";
+}
+function reset(){buf="";shown=""}
+function caretOK(){
+  if(ta.selectionStart!==ta.selectionEnd)return false;
+  const p=ta.selectionStart;return p>=shown.length&&ta.value.slice(p-shown.length,p)===shown;
+}
+function apply(next){const p=ta.selectionStart;ta.setRangeText(next,p-shown.length,p,"end");updateTr()}
+function press(ch){
+  if(!on||!isFirst(ch)){reset();return false}
+  if(!caretOK()){buf="";shown=""}
+  if(buf.length>40){buf="";shown=""}
+  if(ch==="`"&&buf.endsWith("`"))return true; /* repeated break key is ignored */
+  buf+=ch;const next=render(buf),e=diff(shown,next);
+  apply(next);shown=next;inspect(e);return true;
+}
+function back(){
+  if(!on||!buf||!caretOK()){reset();return false}
+  buf=buf.slice(0,-1);const next=render(buf),e=diff(shown,next);
+  apply(next);shown=next;if(!buf)shown="";inspect(e);return true;
+}
+ta.addEventListener("beforeinput",ev=>{
+  if(ev.inputType==="insertText"&&ev.data&&Array.from(ev.data).length===1){if(press(ev.data))ev.preventDefault()}
+  else if(ev.inputType==="deleteContentBackward"){if(back())ev.preventDefault()}
+  else reset();
+});
+ta.addEventListener("keydown",ev=>{if(/^(Arrow|Home$|End$|Page|Delete$|Escape$)/.test(ev.key)||ev.ctrlKey||ev.metaKey||ev.altKey&&ev.key.length>1)reset()});
+ta.addEventListener("keydown",ev=>{
+  if(on&&ev.key==="Dead"&&ev.code==="Equal"&&ev.shiftKey&&!ev.ctrlKey&&!ev.altKey){ev.preventDefault();press("`")}
+});
+ta.addEventListener("pointerdown",reset);ta.addEventListener("blur",()=>{buf="";shown=""});
+
+/* ---------- controls ---------- */
+const power=$("#power");
+function setOn(v){on=v;power.setAttribute("aria-pressed",v);$("#powerLabel").textContent=v?"Kannada ON":"English (off)";reset();ta.focus()}
+power.addEventListener("click",()=>setOn(!on));
+const vbtn=$("#vedic");
+function setVedic(v){vedic=v;vbtn.setAttribute("aria-pressed",v);$("#vedicLabel").textContent=v?"Vedic mode ON":"Vedic mode OFF";reset();refreshChips();updateCv();ta.focus()}
+vbtn.addEventListener("click",()=>setVedic(!vedic));
+document.addEventListener("keydown",ev=>{if(ev.ctrlKey&&ev.shiftKey&&ev.key.toLowerCase()==="k"){ev.preventDefault();setOn(!on)}});
+$("#clear").addEventListener("click",()=>{ta.value="";reset();inspect(null);updateTr();ta.focus()});
+$("#copy").addEventListener("click",async()=>{
+  try{await navigator.clipboard.writeText(ta.value);$("#copy").textContent="Copied"}
+  catch(e){ta.select();$("#copy").textContent="Selected, press Ctrl+C"}
+  setTimeout(()=>$("#copy").textContent="Copy text",1800);
+});
+let themeState=0;const themes=[null,"light","dark"],tl=["auto","light","dark"];
+$("#theme").addEventListener("click",()=>{
+  themeState=(themeState+1)%3;const t=themes[themeState],r=document.documentElement;
+  if(t)r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");
+  $("#theme").textContent="Theme: "+tl[themeState];
+});
+const EX=["namaste","kannaDa","saMskRuta","jnaana","Siva","Baarata","Pala","agni'mILE'","ka_","ka\"","kaM'","gM","g`M'","c`H","k`M",":ga",":ja","SaH"];
+const chips=$("#chips");
+for(const r of EX){
+  const b=document.createElement("button");b.type="button";b.className="chip";
+  b.innerHTML="<span></span><code></code>";b.querySelector("code").textContent=r;
+  b.querySelector("span").textContent=render(r);b.dataset.r=r;
+  b.addEventListener("click",()=>{
+    const was=on;on=true;ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
+    if(ta.value&&!/\s$/.test(ta.value))ta.setRangeText(" ",ta.value.length,ta.value.length,"end");
+    reset();for(const ch of r)press(ch);on=was;if(!was)power.setAttribute("aria-pressed","false");
+  });
+  chips.appendChild(b);
+}
+function refreshChips(){for(const b of chips.children)b.querySelector("span").textContent=render(b.dataset.r)}
+/* reference tables */
+function tbl(title,rows){
+  const d=document.createElement("div");
+  d.innerHTML="<table><thead><tr><th>Type</th><th>Result</th></tr></thead><tbody></tbody></table>";
+  d.querySelector("th").textContent=title;
+  const tb=d.querySelector("tbody");
+  for(const [k,v] of rows){const tr=document.createElement("tr");
+    const a=document.createElement("td");a.textContent=k;const b=document.createElement("td");b.className="kn";b.textContent=v;
+    tr.append(a,b);tb.append(tr)}
+  return d;
+}
+const T=$("#tables");
+T.append(tbl("Vowels",VOWELS.map(([k,i,m])=>[k.join(" "),i+(m?"  ಕ"+m:"")])));
+T.append(tbl("Signs and marks",[["kM or kaM","ಕಂ"],["kH","ಕಃ"],["gM","ಗಂ"],["k`M","ಕ್ಂ"],["c`H","ಚ್ಃ"],["g`M (Vedic on)",AGAMA],["g`M (Vedic off)","ಗ್ಂ"],["' or ^ (Vedic)","ಕ"+UDATTA],["_ or \\ (Vedic)","ಕ"+ANUDATTA],["\" or ^^ (Vedic)","ಕ"+DSV],["`  (German: Shift+´)","break"]]));
+T.append(tbl("Consonants",CONS.map(([k,cl])=>[k.join(" "),cl])));
+ta.addEventListener("input",updateTr);
+$("#save").addEventListener("click",async()=>{if(await saveText("kannada-text.txt",ta.value))flash($("#save"),"Saved")});
+$("#trSave").addEventListener("click",async()=>{const t=$("#trOut").textContent;if(await saveText("transliteration-"+$("#trMode").value+".txt",t))flash($("#trSave"),"Saved")});
+$("#cvIn").addEventListener("input",updateCv);
+$("#cvMode").addEventListener("change",updateCv);
+$("#cvEo").addEventListener("change",updateCv);
+$("#cvCopy").addEventListener("click",async()=>{
+  const t=$("#cvOut").textContent;
+  try{await navigator.clipboard.writeText(t==="–"?"":t);flash($("#cvCopy"),"Copied")}
+  catch(e){const r=document.createRange();r.selectNodeContents($("#cvOut"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);flash($("#cvCopy"),"Selected, press Ctrl+C")}
+});
+$("#cvSave").addEventListener("click",async()=>{if(await saveText("kannada-converted.txt",$("#cvOut").textContent))flash($("#cvSave"),"Saved")});
+$("#cvUse").addEventListener("click",()=>{
+  const t=$("#cvOut").textContent;if(t==="–")return;
+  ta.value=ta.value+(ta.value&&!/\s$/.test(ta.value)?" ":"")+t;reset();updateTr();ta.focus();flash($("#cvUse"),"Done");
+});
+updateCv();
+$("#trMode").addEventListener("change",updateTr);
+$("#trCopy").addEventListener("click",async()=>{
+  const t=$("#trOut").textContent;
+  try{await navigator.clipboard.writeText(t==="–"?"":t);$("#trCopy").textContent="Copied"}
+  catch(e){const r=document.createRange();r.selectNodeContents($("#trOut"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);$("#trCopy").textContent="Selected, press Ctrl+C"}
+  setTimeout(()=>$("#trCopy").textContent="Copy",1800);
+});
+updateTr();
+setOn(true);ta.blur();reset();
+</script>

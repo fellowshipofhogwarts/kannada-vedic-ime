@@ -20,6 +20,10 @@ pub struct HookConfig {
     /// Called on the hook thread right after the hotkey flipped the state.
     /// Must be quick and non-blocking (it just posts an event to the UI loop).
     pub on_hotkey: Arc<dyn Fn() + Send + Sync>,
+    /// Called (from the hook thread) if the keyboard hook cannot start, with a
+    /// short human-readable reason. Typing then silently does nothing, so the UI
+    /// uses this to show a warning toast.
+    pub on_error: Arc<dyn Fn(String) + Send + Sync>,
 }
 
 // Pure and OS-independent so it can be unit-tested everywhere; only the Windows

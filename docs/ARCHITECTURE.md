@@ -11,20 +11,27 @@ flowchart LR
     H -- yes --> T[AppState.toggle + epoch++] --> N[on_hotkey]
     H -- no --> A{Engine ON?}
     A -- no --> P2[Pass through]
-    A -- yes --> M{Modifier / Ctrl / Alt / Win?}
+    A -- yes --> V[engine.set_vedic from AppState]
+    V --> M{Modifier / Ctrl / Alt / Win?}
     M -- "Shift/Caps only" --> P3[Pass, keep word]
-    M -- "shortcut" --> R1[engine.reset, pass]
-    M -- no --> C[Resolve char from layout]
+    M -- "shortcut (AltGr is not one)" --> R1[engine.reset, pass]
+    M -- no --> C[Resolve char from layout; grave and circumflex dead keys count as break and Udatta keys]
     C --> E[Engine.on_char / on_backspace]
     E -- Pass --> P4[Pass through]
     E -- "Consumed(Edit)" --> I[Injector.apply: N x Backspace + Unicode] --> S[Swallow physical key]
   end
   N -- EventLoopProxy --> UI
+  HookThread -. "hook could not start" .-> UI
   subgraph UIThread["Main thread (tao event loop)"]
     UI[UserEvent] --> TR[Update tray icon + tooltip + check mark]
     UI --> TO[Toast via notify-rust, spawned thread]
     MENU[Tray menu click] --> UI
+    UI --> SET[settings.rs: Vedic mode + update check, saved as a text file]
   end
+  subgraph UpdateThread["Update check (short-lived thread)"]
+    CURL[system curl asks GitHub for the latest release tag] --> CMP[update.rs compares version numbers]
+  end
+  CMP -- EventLoopProxy --> UI
 ```
 
 ## Engine pipeline (pure, `engine.rs`)
@@ -43,9 +50,11 @@ machine:
 ```
  consonant ──► cluster + ್            (pending virama)
  vowel     ──► pending? replace ್ by matra (or drop it for 'a') : independent vowel
- M / H     ──► drop pending ್, append ಂ / ಃ
- accent    ──► attachable? drop pending ್, append mark : literal char
- `         ──► break (no output; next vowel independent)
+ M / H     ──► bare consonant: drop pending ್, append ಂ / ಃ   (kM = ಕಂ, full letter)
+               after a break key: keep ್, append ಂ / ಃ         (k`M = ಕ್ಂ, half letter)
+               g`M with Vedic mode on: ga + ್ replaced by U+A8F3
+ accent    ──► (Vedic mode only) attachable? drop pending ್, append mark : literal char
+ `         ──► break (no output; next vowel independent; a repeated ` is ignored)
  unknown   ──► literal (partial tokens such as "R" until "RRi" completes)
 ```
 

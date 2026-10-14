@@ -18,8 +18,10 @@ jobs:
       - run: cargo build --release
       - name: Make the zip
         shell: pwsh
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          $name = "kannada-vedic-ime-${{ github.event.release.tag_name }}-windows"
+          $name = "kannada-vedic-ime-$env:TAG-windows"
           New-Item -ItemType Directory $name | Out-Null
           Copy-Item target/release/kannada_ime.exe $name/
           Copy-Item fonts/Kaveri.ttf, fonts/OFL.txt $name/
@@ -30,4 +32,5 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" $env:ZIP --clobber
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$env:TAG" $env:ZIP --clobber

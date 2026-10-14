@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.0
+
+### Typing
+* **Capital letters for the aspirates:** `K` ಖ, `G` ಘ, `J` ಝ, `TH` ಠ, `DH` ಢ, `P` ಫ, `B` ಭ, `S` ಶ,
+  `Sh` / `SH` ಷ. The older spellings (`kh gh jh Th Dh ph bh sh`) still work. `th` and `dh` stay ಥ and ಧ.
+  Old `S` = ಷ is gone (it is ಶ now). A visarga after ಶ ಟ ಡ is typed `SaH`, `TaH`, `DaH`.
+* **Half consonant before `M` / `H`:** `` k`M `` → ಕ್ಂ, `` c`H `` → ಚ್ಃ. Without the break key it is
+  still the full letter (`kM` → ಕಂ).
+* **`gM` is now ಗಂ** like every other letter. The single āgama sign ꣳ comes from `` g`M `` (Vedic mode on).
+  `MM` no longer has a special meaning.
+* `:g` and `:j` type ಙ and ಞ without the tilde (`~g`, `~j` still work).
+* A repeated break key is ignored.
+* **Vedic mode** (tray menu, on by default, remembered): off = the accent keys `' " _ ^` and ꣳ are
+  switched off, so quotes and apostrophes type normally.
+
+### German keyboard (Windows)
+* AltGr is no longer treated as a Ctrl+Alt shortcut, so `~` (AltGr + `+`) works.
+* The grave and circumflex dead keys (Shift + `´`, `^`) work as break and Udatta keys without Space.
+
+### Desktop agent
+* Tray: **Vedic mode**, **Check for updates** and **Check for updates at startup** items. The update
+  check asks GitHub once (system `curl`), only shows a notice, never installs anything.
+* Settings are saved to a small text file (`%APPDATA%\KannadaIME\settings.txt`, `~/.config/kannada-ime/settings.txt`).
+* A toast tells you if the keyboard hook cannot start (before, typing silently did nothing).
+* `--help`, `--version` and `--translit` now print in a terminal on Windows release builds.
+* The quick-reference page is saved to a per-process file name and lists Kaveri first.
+* Linux agent: `:` key added; documented as US-layout only until the IBus input method exists.
+
+### Web typer
+* **Transliteration panel:** the typed Kannada as IAST, plain English or Devanagari.
+* **Convert to Kannada:** paste Devanagari, IAST (with diacritics) or phonetic English.
+* **Save buttons:** `.txt` files of the typed text, the transliteration and the converted text.
+* Same typing rules as the desktop agent, including Vedic mode.
+
+### Project
+* 50 unit tests (were 38). CI saves `Cargo.lock` as a downloadable artifact. The release workflow passes the tag
+  name through an environment variable. Unused-code and comment warnings cleaned up.
+
+## 0.3.1
+* `Ru` and `RU` now also type ಋ and ೠ (the longer `RRi` / `RRI` still work).
+
 ## 0.3.0 — Kaveri font 1.2
 * **Font renamed to "Kaveri"** (was "Kannada Vedic Long"); version 1.2. Glyphs are unchanged. Uninstall the old font before installing the new one.
 * Licences added: code under MIT OR Apache-2.0, font under OFL 1.1 (`fonts/`).

@@ -1,4 +1,4 @@
-//! hook/linux.rs — Linux backend (beta).
+//! hook/linux.rs — Linux backend (beta, US keyboard layout only).
 //!
 //! Capture : `rdev::grab` (evdev, exclusive grab; works on X11 *and* Wayland
 //!           because it reads /dev/input directly). Needs read/write access to
@@ -9,8 +9,11 @@
 //!           `--inject clipboard`.
 //!
 //! Keys are mapped from the *physical* US-QWERTY position (rdev gives key
-//! identities, not layout-resolved characters). That is what the Baraha scheme
-//! assumes anyway, and it makes the engine independent of Caps Lock.
+//! identities, not layout-resolved characters). That makes the engine
+//! independent of Caps Lock, but it also means this agent only suits a US
+//! layout: on a German keyboard Y and Z are swapped, AltGr counts as Alt and
+//! dead keys are not seen. The planned IBus input method (which receives
+//! layout-resolved characters) is the proper fix for other layouts.
 //!
 //! Longer term, the "right" Linux design is an IBus/Fcitx5 engine; this agent
 //! trades that for being a single self-contained binary.
@@ -82,6 +85,7 @@ fn key_char(key: Key, shift: bool) -> Option<char> {
         KeyX => 'x',
         KeyY => 'y',
         KeyZ => 'z',
+        SemiColon => return Some(if shift { ':' } else { ';' }),
         Quote => return Some(if shift { '"' } else { '\'' }),
         BackQuote => return Some(if shift { '~' } else { '`' }),
         BackSlash => return Some(if shift { '|' } else { '\\' }),
@@ -176,6 +180,7 @@ impl Ctx {
         if !self.state.is_active() {
             return false;
         }
+        self.engine.set_vedic(self.state.is_vedic());
         if self.ctrl || self.alt || self.meta {
             self.engine.reset();
             return false;
@@ -212,6 +217,7 @@ pub fn spawn(cfg: HookConfig) {
                 Ok(e) => e,
                 Err(e) => {
                     eprintln!("kannada_ime: cannot create input injector: {e}");
+                    (cfg.on_error)(format!("Cannot create the input injector: {e}"));
                     return;
                 }
             };
@@ -229,10 +235,12 @@ pub fn spawn(cfg: HookConfig) {
                 swallowed: Vec::new(),
             });
             if let Err(e) = grab(move |ev| ctx.borrow_mut().handle(ev)) {
-                eprintln!(
-                    "kannada_ime: keyboard grab failed ({e:?}). Add your user to the 'input' \
-                     group (sudo usermod -aG input $USER), then log out and back in."
+                let msg = format!(
+                    "Keyboard grab failed ({e:?}). Add your user to the 'input' group \
+                     (sudo usermod -aG input $USER), then log out and back in."
                 );
+                eprintln!("kannada_ime: {msg}");
+                (cfg.on_error)(msg);
             }
         })
         .expect("failed to spawn keyboard hook thread");
