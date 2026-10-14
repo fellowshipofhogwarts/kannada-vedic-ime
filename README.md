@@ -12,7 +12,7 @@ agni'   → ಅಗ್ನಿ॑      ka_ → ಕ॒              ka" → ಕ᳚  
 ## How this was made
 
 This project was **vibe coded extensively with [Claude](https://claude.ai)** (an AI assistant by Anthropic).
-Shashank Koundinya Banavathi Rajashekara set the goals, chose the typing scheme and the Vedic
+I had set the goals, chose the typing scheme and the Vedic
 conventions, tested every version on Windows, and decided what to keep. Claude wrote most of the code,
 the tests, the web typer, the font-modification script and the documentation, in a long conversation.
 
