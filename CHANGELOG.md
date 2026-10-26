@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.5.2
+
+Paste this section at the top of CHANGELOG.md.
+
+### Web typer
+- AltGr characters (e.g. `\` for the anudatta on a German keyboard) now attach to the syllable.
+  Pressing Ctrl, Alt, AltGr, Shift or Win on its own no longer ends the word.
+- The German `^` dead key now types the udatta, as in the desktop app.
+- Devanagari view: jihvamuliya and upadhmaniya now become U+1CF5 / U+1CF6.
+- Convert text: Devanagari nukta letters (क़ ख़ ग़ ज़ ड़ ढ़ फ़ य़) now convert.
+- Transliteration keeps the nukta (dot below) on every letter in ISO 15919 and IAST.
+- Ctrl+Z (browser undo) works after typing Kannada.
+- A word restarts after 48 keys, the same limit as the desktop app (was 40).
+- Hints appear when Caps Lock is on and when a phone keyboard is predicting words.
+- Ctrl+Shift+K only toggles while the typing box has focus.
+- Kannada text is tagged as Kannada (lang="kn"); screen readers no longer read the
+  transliteration box after every key.
+- New "About & credits" section and footer credit line, with the full font notices.
+- The page shows whether the Arkavathi font actually loaded (About & credits, and in
+  the bug report).
+- The version shown on the page now comes from Cargo.toml automatically.
+
+### Windows app
+- Clipboard mode: if the clipboard cannot be opened, a warning now says so (it used to
+  switch to direct typing silently).
+
+### Build and release
+- Releases run all tests first; nothing is attached if a test fails.
+- A release stops if its tag does not match the version in Cargo.toml.
+- CI and releases build exactly the versions in Cargo.lock (`--locked`).
+- CI checks that docs/index.html was rebuilt from the current template.
+- CI reports (without blocking) whether the stated minimum Rust 1.80 still builds.
+- GitHub Actions updated to versions that run on Node 24.
+
 ## 0.5.1
 
 ### Fixes (Windows)
