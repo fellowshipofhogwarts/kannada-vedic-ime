@@ -1,6 +1,6 @@
 [package]
 name = "kannada_ime"
-version = "0.5.1"
+version = "0.5.2"
 license = "MIT OR Apache-2.0"
 authors = ["Shashank Koundinya Banavathi Rajashekara"]
 edition = "2021"

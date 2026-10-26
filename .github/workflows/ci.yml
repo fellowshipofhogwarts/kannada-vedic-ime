@@ -1,10 +1,8 @@
 name: CI
-
 on:
   push:
     branches: [main]
   pull_request:
-
 jobs:
   test:
     strategy:
@@ -13,7 +11,7 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Linux build libraries
         if: runner.os == 'Linux'
         run: |
@@ -23,23 +21,41 @@ jobs:
             libxtst-dev libevdev-dev libdbus-1-dev libudev-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test
-      - run: cargo build --release
-      # Cargo.lock pins the exact dependency versions. Download it from this run
-      # (Summary page -> Artifacts) and commit it to the repository once, so that
-      # releases are built from the same versions you tested.
-      - name: Save Cargo.lock
-        if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Cargo.lock
-          path: Cargo.lock
+      # --locked: build exactly the versions in the committed Cargo.lock, and fail
+      # if Cargo.lock is out of date (run `cargo build` locally and commit it).
+      - run: cargo test --locked
+      - run: cargo build --release --locked
+
+  msrv:
+    # Checks the promise `rust-version = "1.80"` in Cargo.toml (the oldest Rust
+    # that can build this project). INFORMATION ONLY: if this job fails it shows a
+    # red mark, but the run as a whole still passes and nothing is blocked.
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@1.80
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --locked
+
+  web:
+    # docs/index.html must be the build of the current template and font.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: python3 tools/build_web.py
+      - name: docs/index.html is up to date
+        run: |
+          if ! git diff --quiet --ignore-cr-at-eol -- docs/index.html; then
+            echo "::error::docs/index.html is out of date. On your PC run: python tools/build_web.py  then commit docs/index.html"
+            exit 1
+          fi
 
   linux-ime:
     # The Linux input method (Python): its own tests, plus a check that the .deb builds.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: python3 linux/tests/test_engine.py
       - name: Tables are generated from mapping.rs
         run: python3 linux/tools/gen_tables.py src/mapping.rs | diff - linux/kvtables.py

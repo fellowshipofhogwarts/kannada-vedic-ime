@@ -89,6 +89,12 @@ footer{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;color:var(--m
 footer button,footer a.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 10px;color:var(--fg);text-decoration:none;font-size:.85rem}
 footer button:hover,footer a.btn:hover{border-color:var(--accent)}
 footer .sp{margin-left:auto}
+footer .credit{flex-basis:100%;margin:0 0 4px;text-align:center}
+footer a{color:inherit}
+.hint{font-size:.85rem;color:var(--accent);align-self:center}
+dl.credits{grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin-top:12px}
+dl.credits dd{font-family:var(--ui);font-size:.9rem;line-height:1.55}
+dl.credits a,.about a{color:var(--accent)}
 .ck{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
 </style>
 
@@ -96,7 +102,7 @@ footer .sp{margin-left:auto}
   <header>
     <div>
       <h1>Kannada Vedic Typer</h1>
-      <p>Type phonetic English in the box. The same engine as the desktop agent, running in your browser.</p>
+      <p>Type phonetic English in the box. It follows the same typing rules as the desktop app and runs entirely in your browser.</p>
     </div>
     <div class="switch">
       <button class="toggle" id="vedic" type="button" aria-pressed="true"><span class="dot"></span><span id="vedicLabel">Vedic mode ON</span></button>
@@ -105,17 +111,19 @@ footer .sp{margin-left:auto}
     </div>
   </header>
 
-  <textarea id="ta" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Typing area"
+  <textarea id="ta" lang="kn" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Typing area"
     placeholder="Type here, for example: agni'mILE'"></textarea>
 
   <div class="bar">
     <button type="button" id="clear">Clear</button>
     <button type="button" id="copy">Copy text</button>
     <button type="button" id="save">Save text (.txt)</button>
+    <span class="hint" id="caps" hidden>Caps Lock is on: capitals are different letters (t = ತ, T = ಟ)</span>
+    <span class="hint" id="mob" hidden>Your keyboard is predicting words, so letters may not convert. Turn off word suggestions for this page, or use “Convert text” below.</span>
     <button type="button" id="theme" class="theme">Theme: auto</button>
   </div>
 
-  <section aria-live="polite" id="trSec">
+  <section id="trSec">
     <div class="tr-head">
       <h2>Transliteration</h2>
       <div class="ctl">
@@ -151,7 +159,7 @@ footer .sp{margin-left:auto}
         </select>
       </div>
       <textarea id="cvIn" spellcheck="false" aria-label="Text to convert" placeholder="Paste here, for example: अग्नि॑मीळे॑ पुरोहितं   or   agním īḷe purohitaṃ"></textarea>
-      <div id="cvOut" aria-live="polite">–</div>
+      <div id="cvOut" lang="kn" aria-live="polite">–</div>
       <div class="cv-ctl">
         <button type="button" id="cvCopy">Copy</button>
         <button type="button" id="cvSave">Save (.txt)</button>
@@ -166,7 +174,7 @@ footer .sp{margin-left:auto}
       <h2>Live inspector</h2>
       <dl>
         <dt>Keys in this word</dt><dd id="iBuf">–</dd>
-        <dt>Shown</dt><dd id="iShown" class="kn">–</dd>
+        <dt>Shown</dt><dd id="iShown" class="kn" lang="kn">–</dd>
         <dt>Last edit</dt><dd id="iEdit">–</dd>
         <dt>Code points</dt><dd id="iCp">–</dd>
       </dl>
@@ -182,9 +190,22 @@ footer .sp{margin-left:auto}
   <details open>
     <summary>Keys and accents</summary>
     <div class="vm" id="vm"></div>
-    <p class="note">Marks always end up in this order: letter, vowel sign, anusvara or visarga, Vedic mark. Capital <code>M</code> is the anusvara, lowercase <code>m</code> stays ಮ. A consonant followed by <code>M</code> or <code>H</code> gives the full letter plus the sign (<code>kM</code> = ಕಂ). Put the break key in between to keep the half letter: <code>c`H</code> = ಚ್ಃ. With Vedic mode on, <code>g`M</code> gives the single āgama anusvāra ꣳ (U+A8F3). Vedic mode off turns off the three accent keys and ꣳ, so quotes and apostrophes type normally. <code>Q</code> right after a consonant adds the nukta (<code>jQa</code> = ಜ಼). The number keys type Kannada digits unless you switch them off at the top. The font is Arkavathi, a modified copy of Goda (SIL Open Font License), embedded in this page.</p>
+    <p class="note">Marks always end up in this order: letter, vowel sign, anusvara or visarga, Vedic mark. Capital <code>M</code> is the anusvara, lowercase <code>m</code> stays ಮ. A consonant followed by <code>M</code> or <code>H</code> gives the full letter plus the sign (<code>kM</code> = ಕಂ). Put the break key in between to keep the half letter: <code>c`H</code> = ಚ್ಃ. With Vedic mode on, <code>g`M</code> gives the single āgama anusvāra ꣳ (U+A8F3). Vedic mode off turns off the three accent keys and ꣳ, so quotes and apostrophes type normally. <code>Q</code> right after a consonant adds the nukta (<code>jQa</code> = ಜ಼). The number keys type Kannada digits unless you switch them off at the top. The font is Arkavathi, a modified version of Goda by Venkatesh, embedded in this page (see About &amp; credits below).</p>
+  </details>
+  <details class="about" id="about">
+    <summary>About &amp; credits</summary>
+    <dl class="credits">
+      <dt>About</dt><dd>A free, offline typer for Vedic Kannada. Nothing you type leaves this page.</dd>
+      <dt>Made by</dt><dd>Shashank Koundinya Banavathi Rajashekara, with help of Claude · <a href="https://github.com/fellowshipofhogwarts" target="_blank" rel="noopener">github.com/fellowshipofhogwarts</a></dd>
+      <dt>Feedback</dt><dd>Questions and ideas → <a href="https://github.com/fellowshipofhogwarts/kannada-vedic-ime/discussions" target="_blank" rel="noopener">GitHub Discussions</a> · Bugs → <a href="https://github.com/fellowshipofhogwarts/kannada-vedic-ime/issues/new/choose" target="_blank" rel="noopener">GitHub Issues</a></dd>
+      <dt>Desktop app</dt><dd>Type Kannada in Word or any other app → <a href="https://github.com/fellowshipofhogwarts/kannada-vedic-ime/releases/latest" target="_blank" rel="noopener">Download for Windows / Linux</a></dd>
+      <dt>Program licence</dt><dd>MIT OR Apache-2.0 (<a href="https://github.com/fellowshipofhogwarts/kannada-vedic-ime" target="_blank" rel="noopener">see the repository</a>)</dd>
+      <dt>Font</dt><dd>Arkavathi is a modified version of <b>Goda</b> by Venkatesh (<a href="https://sites.google.com/site/bhashaime/Goda-and-GodaGr-Kannada-Vedic-fonts-with-Taittiriya--Sama-Svaras" target="_blank" rel="noopener">Goda project page</a>).<br>Goda © 2014, Parankusacar Institute of Vedic Studies and © 2002, Indian Institute of Science, with Reserved Font Name “Goda”. Modifications © 2026 Shashank Koundinya Banavathi Rajashekara. Licensed under the <a href="https://github.com/fellowshipofhogwarts/kannada-vedic-ime/blob/main/fonts/OFL.txt" target="_blank" rel="noopener">SIL Open Font License 1.1</a>.<br><span id="fontState" class="note"></span></dd>
+      <dt>Standards</dt><dd>Unicode Kannada and Vedic Extensions · ISO 15919 · IAST</dd>
+    </dl>
   </details>
   <footer>
+    <p class="credit">Made by <b>Shashank Koundinya Banavathi Rajashekara</b> with help of Claude · MIT OR Apache-2.0 · Font: Arkavathi, based on Goda by Venkatesh (SIL OFL 1.1) · <a href="https://github.com/fellowshipofhogwarts/kannada-vedic-ime" target="_blank" rel="noopener">Source &amp; feedback on GitHub</a></p>
     <span>Version <span id="ver"></span></span>
     <span>Nothing you type leaves your browser.</span>
     <span class="sp"></span>
@@ -210,8 +231,7 @@ const CONS=[[["k"],0xC95],[["K","kh"],0xC96],[["g"],0xC97],[["G","gh"],0xC98],[[
 CONS.push([["x"],c(0xC95)+VIRAMA+c(0xCB7)],[["jn"],c(0xC9C)+VIRAMA+c(0xC9E)],[["f"],c(0xCAB)+c(0xCBC)]);
 const SIGNS=[[["M"],ANUSVARA],[["H"],VISARGA],[[":M"],"\u0C81"]];
 const OTHERS=[[["Z"],"\u0CBD"],[[":h"],"\u0CF1"],[[":H"],"\u0CF2"]];
-const NUKTA="\u0CBC",VERSION="0.5.0";
-const AGAMAS=[]; /* MM no longer special: the agama sign comes only from g`M (Vedic mode) */
+const NUKTA="\u0CBC",VERSION="__VERSION__";
 const ACCENTS=[[["'","^"],UDATTA,"Udatta"],[["_","\\"],ANUDATTA,"Anudatta"],[['"',"^^"],DSV,"Svarita / double svarita"]];
 const BREAK="`";
 const ccc=ch=>ch===UDATTA||ch===DSV?230:ch===ANUDATTA?220:0;
@@ -223,14 +243,13 @@ for(const [ks,cl] of CONS)for(const k of ks)TABLE.set(k,{t:"c",cl});
 for(const [ks,s] of SIGNS)for(const k of ks)TABLE.set(k,{t:"s",s});
 for(const [ks,s] of OTHERS)for(const k of ks)TABLE.set(k,{t:"o",s});
 TABLE.set("Q",{t:"n"});
-for(const [ks,s] of AGAMAS)for(const k of ks)TABLE.set(k,{t:"g",s});
 for(const [ks,mk] of ACCENTS)for(const k of ks)TABLE.set(k,{t:"a",mk});
 TABLE.set(BREAK,{t:"b"});
 const FIRST=new Set([...TABLE.keys()].map(k=>k[0]));
 const ACC_FIRST=new Set(ACCENTS.flatMap(([ks])=>ks.map(k=>k[0])));
 let vedic=true,kd=true;
 const isFirst=ch=>FIRST.has(ch)&&(vedic||!ACC_FIRST.has(ch));
-const lookup=k=>{const t=TABLE.get(k);return t&&!vedic&&(t.t==="a"||t.t==="g")?null:t};
+const lookup=k=>{const t=TABLE.get(k);return t&&!vedic&&t.t==="a"?null:t};
 
 /* ---------- render (same rules as engine.rs) ---------- */
 function marksStart(a){let s=a.length;for(let i=a.length-1;i>=0&&isMark(a[i]);i--)s=i;return s}
@@ -254,9 +273,6 @@ function render(roman){
           }else{out.pop();out.push(hit.s)}
         }else out.splice(marksStart(out),0,hit.s);
         pending=false;attach=true;afterBreak=false;break;
-      case"g":
-        if(pending){const ga=out.length>=2&&out[out.length-2]==="\u0C97";out.pop();if(ga)out.pop()}
-        out.push(hit.s);pending=false;attach=true;afterBreak=false;break;
       case"a":
         if(attach){
           if(pending){out.pop();pending=false}
@@ -298,6 +314,8 @@ function translit(text,mode,lowBar){
   if(mode==="deva"){
     return cps.map(x=>{
       if(x===0xCDE)return String.fromCodePoint(x);
+      if(x===0xCF1)return "\u1CF5"; /* jihvamuliya */
+      if(x===0xCF2)return "\u1CF6"; /* upadhmaniya */
       return x>=0xC80&&x<=0xCEF?String.fromCodePoint(x-0x380):String.fromCodePoint(x);
     }).join("");
   }
@@ -309,7 +327,7 @@ function translit(text,mode,lowBar){
     const x=cps[i];
     if(TR_C[x]){
       out.push(TR_C[x][k]);const ci=out.length-1;i++;
-      if(cps[i]===0xCBC){if(x===0xCAB)out[ci]="f";else if(x===0xC9C)out[ci]="z";i++}
+      if(cps[i]===0xCBC){if(x===0xCAB)out[ci]="f";else if(x===0xC9C)out[ci]="z";else if(!k)out[ci]+="\u0323";i++}
       if(cps[i]===0xCCD){i++}
       else if(TR_M[cps[i]]){pushV(TR_M[cps[i]]);i++}
       else{pushV(0xC85)}
@@ -348,7 +366,7 @@ function updateTr(){
 /* ---------- convert pasted text to Kannada ---------- */
 const KN=/\p{Script=Kannada}/u;
 function devaToKannada(text){
-  return Array.from(text).map(ch=>{
+  return Array.from(text.normalize("NFC")).map(ch=>{
     const x=ch.codePointAt(0);
     const ok=(x>=0x901&&x<=0x963&&!(x>=0x958&&x<=0x95F))||(x>=0x966&&x<=0x96F);
     if(ok){const y=String.fromCodePoint(x+0x380);if(KN.test(y))return y}
@@ -410,12 +428,6 @@ function updateCv(){
 async function saveText(name,text){
   if(!text||text==="–")return false;
   try{
-    if(window.claude&&window.claude.use){
-      const d=await window.claude.use("downloads");
-      if(d){await d.save({filename:name,data:text});return true}
-    }
-  }catch(e){if(e&&e.code==="declined")return false}
-  try{
     const u=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));
     const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),2000);return true;
@@ -426,6 +438,7 @@ function flash(btn,label,ms){const old=btn.dataset.label||btn.textContent;btn.da
 /* ---------- editor ---------- */
 const $=s=>document.querySelector(s);
 const ta=$("#ta");let buf="",shown="",on=true;
+const MAX_BUFFER=48; /* same as MAX_BUFFER in engine.rs */
 const cp=s=>Array.from(s).map(ch=>"U+"+ch.codePointAt(0).toString(16).toUpperCase().padStart(4,"0")).join(" ");
 function inspect(edit){
   $("#iBuf").textContent=buf||"–";
@@ -438,12 +451,30 @@ function caretOK(){
   if(ta.selectionStart!==ta.selectionEnd)return false;
   const p=ta.selectionStart;return p>=shown.length&&ta.value.slice(p-shown.length,p)===shown;
 }
-function apply(next){const p=ta.selectionStart;ta.setRangeText(next,p-shown.length,p,"end");updateTr()}
+let applying=false;
+function apply(next){
+  const p=ta.selectionStart,a=p-shown.length;
+  let done=false;
+  applying=true;
+  try{
+    ta.setSelectionRange(a,p);
+    if(next)done=document.execCommand("insertText",false,next);
+    else done=a===p||document.execCommand("delete",false);
+  }catch(e){done=false}
+  applying=false;
+  if(!done){
+    /* Fallback for browsers without execCommand: no browser undo, but correct text. */
+    ta.setRangeText(next,a,p,"end");
+  }else if(ta.selectionStart!==a+next.length){
+    ta.setSelectionRange(a+next.length,a+next.length);
+  }
+  updateTr();
+}
 function press(ch){
   if(on&&kd&&/^[0-9]$/.test(ch)){reset();const d=String.fromCharCode(0xCE6+Number(ch));apply(d);inspect({back:0,text:d});return true}
   if(!on||!isFirst(ch)){reset();return false}
   if(!caretOK()){buf="";shown=""}
-  if(buf.length>40){buf="";shown=""}
+  if(buf.length>=MAX_BUFFER){buf="";shown=""}
   if(ch==="`"&&buf.endsWith("`"))return true; /* repeated break key is ignored */
   buf+=ch;const next=render(buf),e=diff(shown,next);
   apply(next);shown=next;inspect(e);return true;
@@ -454,14 +485,27 @@ function back(){
   apply(next);shown=next;if(!buf)shown="";inspect(e);return true;
 }
 ta.addEventListener("beforeinput",ev=>{
+  if(applying)return;
+  if(ev.isComposing||ev.inputType==="insertCompositionText"){reset();return}
   if(ev.inputType==="insertText"&&ev.data&&Array.from(ev.data).length===1){if(press(ev.data))ev.preventDefault()}
   else if(ev.inputType==="deleteContentBackward"){if(back())ev.preventDefault()}
   else reset();
 });
-ta.addEventListener("keydown",ev=>{if(/^(Arrow|Home$|End$|Page|Delete$|Escape$)/.test(ev.key)||ev.ctrlKey||ev.metaKey||ev.altKey&&ev.key.length>1)reset()});
+const MODS=new Set(["Shift","Control","Alt","AltGraph","Meta","OS","CapsLock","NumLock","ScrollLock"]);
 ta.addEventListener("keydown",ev=>{
-  if(on&&ev.key==="Dead"&&ev.code==="Equal"&&ev.shiftKey&&!ev.ctrlKey&&!ev.altKey){ev.preventDefault();press("`")}
+  if(ev.getModifierState)$("#caps").hidden=!(on&&ev.getModifierState("CapsLock"));
+  if(MODS.has(ev.key))return; /* a modifier on its own never ends the word */
+  /* AltGr (German, French ... keyboards) is reported as Ctrl+Alt but only types characters */
+  const altgr=ev.getModifierState&&ev.getModifierState("AltGraph");
+  if(/^(Arrow|Home$|End$|Page|Delete$|Escape$)/.test(ev.key)||ev.metaKey||(!altgr&&(ev.ctrlKey||ev.altKey&&ev.key.length>1)))reset();
 });
+ta.addEventListener("keydown",ev=>{
+  if(!on||ev.key!=="Dead"||ev.ctrlKey||ev.altKey)return;
+  /* German keyboard dead keys: Shift+´ = break key, ^ = udatta (same as the desktop app) */
+  if(ev.code==="Equal"&&ev.shiftKey){ev.preventDefault();press("`")}
+  else if(ev.code==="Backquote"&&!ev.shiftKey&&isFirst("^")){ev.preventDefault();press("^")}
+});
+ta.addEventListener("compositionstart",()=>{reset();$("#mob").hidden=false});
 ta.addEventListener("pointerdown",reset);ta.addEventListener("blur",()=>{buf="";shown=""});
 
 /* ---------- controls ---------- */
@@ -474,7 +518,7 @@ dbtn.addEventListener("click",()=>setDigits(!kd));
 const vbtn=$("#vedic");
 function setVedic(v){vedic=v;vbtn.setAttribute("aria-pressed",v);$("#vedicLabel").textContent=v?"Vedic mode ON":"Vedic mode OFF";reset();refreshChips();updateCv();ta.focus()}
 vbtn.addEventListener("click",()=>setVedic(!vedic));
-document.addEventListener("keydown",ev=>{if(ev.ctrlKey&&ev.shiftKey&&ev.key.toLowerCase()==="k"){ev.preventDefault();setOn(!on)}});
+document.addEventListener("keydown",ev=>{if(document.activeElement===ta&&ev.ctrlKey&&ev.shiftKey&&ev.key.toLowerCase()==="k"){ev.preventDefault();setOn(!on)}});
 $("#clear").addEventListener("click",()=>{ta.value="";reset();inspect(null);updateTr();ta.focus()});
 $("#copy").addEventListener("click",async()=>{
   try{await navigator.clipboard.writeText(ta.value);$("#copy").textContent="Copied"}
@@ -586,8 +630,16 @@ $("#trCopy").addEventListener("click",async()=>{
   setTimeout(()=>$("#trCopy").textContent="Copy",1800);
 });
 $("#ver").textContent=VERSION;
+/* Font check: if the embedded Arkavathi font fails to load (missing or broken font data),
+   the browser silently uses Noto Sans Kannada / Nirmala UI instead. Make that visible. */
+let fontState="checking";
+function showFont(){$("#fontState").textContent=fontState==="Arkavathi"?"Font status: Arkavathi is loaded.":"Font status: Arkavathi did NOT load; a system font is shown instead.";}
+if(document.fonts&&document.fonts.load){
+  document.fonts.load('24px "KVL"',"\u0C95").then(f=>{fontState=f.length?"Arkavathi":"fallback (Arkavathi failed to load)";showFont()})
+  .catch(()=>{fontState="fallback (Arkavathi failed to load)";showFont()});
+}
 $("#bug").addEventListener("click",async()=>{
-  const t=["Kannada Vedic Typer "+VERSION,"Browser: "+navigator.userAgent,
+  const t=["Kannada Vedic Typer "+VERSION,"Browser: "+navigator.userAgent,"Font: "+fontState,
    "Kannada typing: "+(on?"on":"off"),"Vedic mode: "+(vedic?"on":"off"),"Kannada digits: "+(kd?"on":"off"),
    "Keys in this word: "+(buf||"-"),"Shown: "+(shown||"-"),"Code points: "+(shown?cp(shown):"-"),
    "","What I typed:","What I expected:","What I saw:"].join("\n");

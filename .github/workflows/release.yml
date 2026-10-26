@@ -1,21 +1,30 @@
 name: Release
-
 # Runs when you publish a release on GitHub (Releases -> Draft a new release -> Publish).
 on:
   release:
     types: [published]
-
 permissions:
   contents: write
-
 jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - name: Release tag matches the version in Cargo.toml
+        shell: pwsh
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $v = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+          if ("v$v" -ne $env:TAG) {
+            Write-Error "The release tag is $env:TAG but Cargo.toml says version $v. Delete this release and its tag, fix one of them, and publish again."
+            exit 1
+          }
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release
+      # Nothing is built or uploaded unless all tests pass.
+      - run: cargo test --locked
+      - run: cargo build --release --locked
       - name: Make the zip
         shell: pwsh
         env:
@@ -36,9 +45,12 @@ jobs:
         run: gh release upload "$env:TAG" $env:ZIP --clobber
 
   linux-deb:
+    # Waits for the Windows job, so a failed test means nothing is attached at all.
+    needs: windows
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - run: python3 linux/tests/test_engine.py
       - name: Build the .deb
         env:
           TAG: ${{ github.event.release.tag_name }}

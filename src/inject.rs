@@ -7,8 +7,9 @@
 //!   batch, no clipboard involved). On Linux it is `enigo`'s text typing.
 //! * **Clipboard** (fallback for apps that ignore synthetic Unicode events):
 //!   backspaces, then put the text on the clipboard and send Ctrl+V, then
-//!   restore the previous *text* clipboard. Experimental: it replaces non-text
-//!   clipboard content with nothing.
+//!   restore the previous *text* clipboard. Experimental: only *text* is saved
+//!   and restored, so an image or copied files on the clipboard are lost, and
+//!   clipboard-history tools (Win+V) record every syllable.
 //!
 //! ## Restoring the clipboard (0.5.1, fix C1)
 //!
@@ -138,6 +139,14 @@ impl<K: Keys> Injector<K> {
         }
     }
 
+    /// Clipboard mode was asked for, but the clipboard could not be opened, so
+    /// every edit is typed directly (Unicode mode) instead. 0.5.2 (M2): the
+    /// platform layer uses this to tell the user instead of falling back silently.
+    #[cfg_attr(not(windows), allow(dead_code))]
+    pub fn clipboard_unavailable(&self) -> bool {
+        self.mode == Mode::Clipboard && self.clipboard.is_none()
+    }
+
     /// True if the caller still has to call [`Self::restore_clipboard`].
     #[cfg_attr(not(windows), allow(dead_code))]
     pub fn restore_pending(&self) -> bool {
@@ -203,6 +212,15 @@ mod tests {
         assert!(!inj.restore_pending());
         inj.restore_clipboard(); // harmless
         assert!(!inj.restore_pending());
+    }
+
+    #[test]
+    fn missing_clipboard_is_reported_only_in_clipboard_mode() {
+        let mut inj = Injector::with_deferred_restore(FakeKeys::default(), Mode::Clipboard);
+        inj.clipboard = None; // as if the clipboard could not be opened
+        assert!(inj.clipboard_unavailable());
+        let uni = Injector::with_deferred_restore(FakeKeys::default(), Mode::Unicode);
+        assert!(!uni.clipboard_unavailable());
     }
 
     #[test]

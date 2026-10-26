@@ -78,6 +78,9 @@ const KB_HOOK_FAILED: &str = "Windows refused the keyboard hook, so typing will 
 const MOUSE_HOOK_FAILED: &str = "Mouse clicks cannot be detected, so typing still converts but \
      the program cannot tell when you click somewhere else. After clicking, press Space or an \
      arrow key before typing, otherwise a few letters may be erased. Restart the program to try again.";
+const CLIPBOARD_FAILED: &str = "Clipboard mode is on, but the clipboard could not be opened. \
+     Kannada text is typed directly instead (the normal mode), which works in most apps. \
+     Restart the program to try clipboard mode again.";
 
 // ---------------------------------------------------------------------------
 // Injection
@@ -620,6 +623,12 @@ fn run_hook_thread(cfg: HookConfig) {
         HOOKS.set(hooks);
         mark_seen_now();
         with_ctx(|ctx| ctx.report_hook_state(hooks)); // warns if only the mouse hook failed
+        // M2 (0.5.2): clipboard mode asked for but unusable -> say so, don't fall back silently.
+        let mut clipboard_missing = false;
+        with_ctx(|ctx| clipboard_missing = ctx.injector.clipboard_unavailable());
+        if clipboard_missing {
+            on_error(CLIPBOARD_FAILED.into());
+        }
 
         let focus = SetWinEventHook(
             EVENT_OBJECT_FOCUS,
