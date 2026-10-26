@@ -43,7 +43,7 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
-          linux/build_deb.sh "${TAG#v}"
+          bash linux/build_deb.sh "${TAG#v}"
           echo "DEB=$(ls dist/*.deb)" >> "$GITHUB_ENV"
       - name: Attach to the release
         env:
