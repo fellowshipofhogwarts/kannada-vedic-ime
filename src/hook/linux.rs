@@ -181,6 +181,7 @@ impl Ctx {
             return false;
         }
         self.engine.set_vedic(self.state.is_vedic());
+        self.engine.set_digits(self.state.is_digits());
         if self.ctrl || self.alt || self.meta {
             self.engine.reset();
             return false;

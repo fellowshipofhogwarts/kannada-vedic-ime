@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.5.1
+
+### Fixes (Windows)
+- **Clipboard mode pasted your old clipboard text.** The clipboard is now restored
+  about 0.3 s after the paste, outside the keyboard hook, so the right text is pasted
+  and your own clipboard text comes back afterwards.
+- **AltGr characters now attach to the syllable.** Pressing Ctrl, Alt, AltGr or Win on
+  its own no longer ends the word, so `\` (anudatta) on a German keyboard works mid-word.
+- **Mouse-click detection failures are reported.** If Windows refuses the mouse hook you
+  get a warning instead of silent text deletion after a click. A watchdog reinstalls
+  both hooks if Windows removes them in the background.
+- **Fewer wrong backspaces.** The word is also forgotten when the keyboard focus moves
+  to another field inside the same window.
+- The tray warning title is now "Kannada IME: input problem".
+- If the keyboard thread cannot start, you get a warning instead of a crash.
+
+### Internal
+- Removed the unsafe `nil<T>()` helper; null handles are now plain null pointers.
+- New feature `Win32_UI_Accessibility` in Cargo.toml.
+- New tests: modifier handling, watchdog decision, injector (Unicode path).
+
+
+## 0.5.0
+
+### Typing
+* **New keys:** `Z` ಽ (`ZZ` gives ಽಽ), `:h` ೱ, `:H` ೲ, `zh` ೞ, `:l` ಌ, `:L` ೡ, `:M` ಁ (candrabindu), and `Q` right after a
+  consonant adds the nukta (`jQa` ಜ಼).
+* **Kannada digits are the default:** the number keys (and numpad) type ೦-೯. Untick "Kannada digits" in the tray menu for 0-9.
+  The choice is remembered (`kannada_digits` in the settings file).
+* `g`M` is unchanged (ꣳ with Vedic mode on, ಗ್ಂ with it off).
+
+### Font
+* **Renamed Kaveri to Arkavathi** (version 1.3, same glyphs). Uninstall Kaveri before installing Arkavathi.
+  The font information sheet is now `docs/Arkavathi.pdf`.
+
+### Web typer
+* Key chart in the order of the Kannada varnamala, with headings, clickable boxes and the new keys.
+* Transliteration: ISO 15919 is the default, then IAST, simple English and Devanagari. Vedic marks follow the Rigveda
+  printing convention (grave for the upper bar, underline for the lower bar, double grave for the double bar), with a switch for the underline.
+* New switch for Kannada digits, a version number, a **Copy bug report** button, and no outside requests (system fonts only).
+* A note about Devanagari boxes on iPhone Safari.
+
+### Linux (experimental)
+* New `linux/` folder: an IBus input method with the same rules, a LibreOffice Writer template, install scripts and a `.deb` package.
+
+### Project
+* Bug-report form on GitHub, new README, a Linux job in CI, and a "Kannada IME" name for Windows toast pop-ups (falls back to the old behaviour if it cannot be registered).
+
 ## 0.4.0
 
 ### Typing

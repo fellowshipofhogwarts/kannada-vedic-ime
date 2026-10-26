@@ -215,6 +215,26 @@ pub fn render_with(roman: &str, vedic: bool) -> Rendered {
                 }
                 after_break = false;
             }
+            Tok::Other(ch) => {
+                out.push(ch);
+                pending = false;
+                attachable = false;
+                after_break = false;
+            }
+            Tok::Nukta => {
+                // Only right after a bare consonant: the nukta goes before the
+                // virama (ಜ + ಼ + ್), so a following vowel sign lands on ಜ಼.
+                if pending && !out[..out.len() - VIRAMA.len_utf8()].ends_with(mapping::NUKTA) {
+                    out.pop();
+                    out.push(mapping::NUKTA);
+                    out.push(VIRAMA);
+                } else {
+                    out.push('Q');
+                    pending = false;
+                    attachable = false;
+                }
+                after_break = false;
+            }
             Tok::Break => after_break = true,
         }
         i += len;
@@ -289,6 +309,8 @@ pub struct Engine {
     shown: String,
     /// Vedic mode: accent keys and the agama anusvara are active.
     vedic: bool,
+    /// Kannada digits: the keys 0-9 type ೦-೯ (default). Off = English digits.
+    digits: bool,
 }
 
 impl Default for Engine {
@@ -297,6 +319,7 @@ impl Default for Engine {
             buf: String::new(),
             shown: String::new(),
             vedic: true,
+            digits: true,
         }
     }
 }
@@ -320,6 +343,14 @@ impl Engine {
         }
     }
 
+    /// Choose Kannada (true) or English (false) digits. A change ends the word.
+    pub fn set_digits(&mut self, on: bool) {
+        if self.digits != on {
+            self.digits = on;
+            self.reset();
+        }
+    }
+
     #[cfg(test)]
     pub fn is_idle(&self) -> bool {
         self.buf.is_empty()
@@ -330,6 +361,16 @@ impl Engine {
         if c == '`' && self.buf.ends_with('`') {
             // A repeated break key changes nothing: swallow it silently.
             return Outcome::Consumed(Edit::default());
+        }
+        if self.digits {
+            if let Some(d) = mapping::kannada_digit(c) {
+                // A digit ends the word and is typed as a Kannada digit.
+                self.reset();
+                return Outcome::Consumed(Edit {
+                    backspaces: 0,
+                    text: d.to_string(),
+                });
+            }
         }
         if mapping::is_phonetic_key(c) {
             if self.buf.len() >= MAX_BUFFER {
@@ -513,7 +554,59 @@ mod tests {
         assert_eq!(typed("ka a"), "ಕ ಅ");
         // Unmapped Latin letters pass through untouched.
         assert_eq!(typed("q"), "q");
-        assert_eq!(typed("1.5"), "1.5");
+        assert_eq!(typed("1.5"), "೧.೫"); // Kannada digits are on by default
+    }
+
+    #[test]
+    fn digits_can_be_switched_to_english() {
+        let mut sc = Screen::default();
+        sc.engine.set_digits(false);
+        sc.type_str("ka1.5");
+        assert_eq!(sc.s(), "ಕ1.5");
+        sc.engine.set_digits(true);
+        sc.type_str("0987654321");
+        assert!(sc.s().ends_with("೦೯೮೭೬೫೪೩೨೧"));
+    }
+
+    #[test]
+    fn digit_ends_the_word() {
+        // After a digit the next vowel is independent again.
+        assert_eq!(typed("k1a"), "ಕ್೧ಅ");
+    }
+
+    #[test]
+    fn version_050_new_keys() {
+        assert_eq!(typed("Z"), "ಽ");
+        assert_eq!(typed("ZZ"), "ಽಽ");
+        assert_eq!(typed("aZ"), "ಅಽ");
+        assert_eq!(typed(":h"), "ೱ");
+        assert_eq!(typed(":H"), "ೲ");
+        assert_eq!(typed(":hka"), "ೱಕ");
+        assert_eq!(typed("zha"), "ೞ");
+        assert_eq!(typed("zhi"), "ೞಿ");
+        assert_eq!(typed(":l"), "ಌ");
+        assert_eq!(typed(":L"), "ೡ");
+        assert_eq!(typed("k:l"), "ಕೢ");
+        assert_eq!(typed("k:L"), "ಕೣ");
+        assert_eq!(typed(":M"), "ಁ");
+        assert_eq!(typed("ka:M"), "ಕಁ");
+        // Nukta: right after a consonant, before the virama / vowel sign.
+        assert_eq!(typed("jQa"), "ಜ಼");
+        assert_eq!(typed("jQi"), "ಜ಼ಿ");
+        assert_eq!(typed("DQa"), "ಡ಼");
+        assert_eq!(typed("jQ"), "ಜ಼್");
+        // Q anywhere else stays a plain letter; a second Q too.
+        assert_eq!(typed("kaQ"), "ಕQ");
+        assert_eq!(typed("jQQ"), "ಜ಼್Q");
+        // Dropped keys no longer exist.
+        assert_eq!(typed("ra"), "ರ");
+        assert_eq!(typed("z"), "z");
+    }
+
+    #[test]
+    fn nukta_and_accent_stay_in_order() {
+        assert_eq!(typed("jQa'"), "ಜ಼\u{0951}");
+        assert_eq!(typed("jQ'"), "ಜ಼\u{0951}");
     }
 
     #[test]

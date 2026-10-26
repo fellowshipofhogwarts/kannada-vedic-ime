@@ -11,7 +11,7 @@ flowchart LR
     H -- yes --> T[AppState.toggle + epoch++] --> N[on_hotkey]
     H -- no --> A{Engine ON?}
     A -- no --> P2[Pass through]
-    A -- yes --> V[engine.set_vedic from AppState]
+    A -- yes --> V[engine.set_vedic + set_digits from AppState]
     V --> M{Modifier / Ctrl / Alt / Win?}
     M -- "Shift/Caps only" --> P3[Pass, keep word]
     M -- "shortcut (AltGr is not one)" --> R1[engine.reset, pass]
@@ -26,7 +26,7 @@ flowchart LR
     UI[UserEvent] --> TR[Update tray icon + tooltip + check mark]
     UI --> TO[Toast via notify-rust, spawned thread]
     MENU[Tray menu click] --> UI
-    UI --> SET[settings.rs: Vedic mode + update check, saved as a text file]
+    UI --> SET[settings.rs: Vedic mode, Kannada digits, update check, saved as a text file]
   end
   subgraph UpdateThread["Update check (short-lived thread)"]
     CURL[system curl asks GitHub for the latest release tag] --> CMP[update.rs compares version numbers]

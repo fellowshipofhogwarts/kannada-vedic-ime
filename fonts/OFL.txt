@@ -2,7 +2,7 @@ Copyright (c) 2014, Parankusacar Institute of Vedic Studies (http://www.parankus
 Copyright (c) 2002, Indian Institute of Science, with Reserved Font Name "Goda".
 
 Modifications Copyright (c) 2026 Shashank Koundinya Banavathi Rajashekara.
-Kaveri is a modified version of Goda 1.0.5 (taller Vedic bars, Devanagari-script
+Arkavathi is a modified version of Goda 1.0.5 (taller Vedic bars, Devanagari-script
 mark positioning). It is renamed because of the Reserved Font Name.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

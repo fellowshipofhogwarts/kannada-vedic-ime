@@ -3,7 +3,7 @@
 //! The tray menu writes this HTML to the temp dir and opens it in the browser.
 
 use crate::engine::transliterate;
-use crate::mapping::{ACCENTS, AGAMA_ANUSVARA, CONSONANTS, SIGNS, VOWELS};
+use crate::mapping::{ACCENTS, AGAMA_ANUSVARA, CONSONANTS, NUKTA, OTHERS, SIGNS, VOWELS};
 use std::fmt::Write as _;
 
 fn esc(s: &str) -> String {
@@ -33,7 +33,7 @@ h1{font-size:1.5rem}h2{margin-top:2rem;font-size:1.1rem;border-bottom:1px solid 
 table{border-collapse:collapse;width:100%}td,th{padding:.35rem .6rem;border-bottom:1px solid var(--line);text-align:left}
 th{color:var(--mut);font-weight:600;font-size:.8rem;text-transform:uppercase}
 kbd{font:600 .85rem ui-monospace,monospace;background:var(--line);border-radius:4px;padding:.05rem .4rem}
-.kn{font-family:"Kaveri","Noto Sans Kannada","Nirmala UI","Tunga","Sampige",sans-serif;font-size:1.25rem}
+.kn{font-family:"Arkavathi","Noto Sans Kannada","Nirmala UI","Tunga","Sampige",sans-serif;font-size:1.25rem}
 .note{color:var(--mut)}code{font-family:ui-monospace,monospace}
 </style></head><body>
 <h1>Kannada phonetic typing — quick reference</h1>
@@ -47,7 +47,7 @@ still work. <kbd>M</kbd> or <kbd>H</kbd> right after a bare consonant gives the 
 (<code>kM</code> ಕಂ); put the break key in between for the half letter
 (<code>k`M</code> ಕ್ಂ, <code>c`H</code> ಚ್ಃ). A visarga after ಶ ಟ ಡ needs the vowel:
 <code>SaH</code>, <code>TaH</code>, <code>DaH</code>.
-<kbd>:g</kbd> and <kbd>:j</kbd> give ಙ and ಞ.</p>
+<kbd>:g</kbd> and <kbd>:j</kbd> give ಙ and ಞ; <kbd>zh</kbd> gives ೞ; <kbd>Q</kbd> right after a consonant adds the nukta (<code>jQa</code> ಜ಼).</p>
 "#,
     );
 
@@ -77,6 +77,18 @@ still work. <kbd>M</kbd> or <kbd>H</kbd> right after a bare consonant gives the 
         h,
         "<tr><td><kbd>g</kbd> <kbd>`</kbd> <kbd>M</kbd> <span class=note>(Vedic mode)</span></td>\
 <td class=kn>ಅ{AGAMA_ANUSVARA}</td><td class=kn>ಗ{AGAMA_ANUSVARA}</td></tr>"
+    );
+    h.push_str("</table>");
+
+    // Other letters and signs
+    h.push_str("<h2>Other signs</h2><table><tr><th>Type</th><th>Result</th></tr>");
+    for (ks, ch) in OTHERS {
+        let _ = write!(h, "<tr><td>{}</td><td class=kn>{}</td></tr>", keys(ks), ch);
+    }
+    let _ = write!(
+        h,
+        "<tr><td><kbd>Z</kbd> <kbd>Z</kbd></td><td class=kn>ಽಽ</td></tr>\
+<tr><td><kbd>j</kbd> <kbd>Q</kbd> <kbd>a</kbd></td><td class=kn>ಜ{NUKTA}</td></tr>"
     );
     h.push_str("</table>");
 
@@ -129,6 +141,7 @@ U+1CDA; if they show as boxes, install a Vedic-capable Kannada font.</p>",
 <li><kbd>`</kbd> (backtick) is a break: <code>s`ha</code> → ಸ್ಹ instead of ಶ. On a German keyboard <kbd>Shift</kbd>+<kbd>´</kbd> works as the break key without Space.</li>\
 <li>Vedic mode (tray menu) switches the accent keys and ꣳ on or off. Off, the keys <kbd>'</kbd> <kbd>&quot;</kbd> <kbd>_</kbd> <kbd>^</kbd> type normally.</li>\
 <li><kbd>Backspace</kbd> undoes the last <i>keystroke</i> of the current word.</li>\
+<li>The number keys type Kannada digits ೦ ೧ ೨ … ೯ (numpad too). Untick \"Kannada digits\" in the tray menu for 0 1 2 … 9.</li>\
 <li>Space, Enter, arrows, mouse clicks and shortcuts end the current word.</li>\
 <li>Caps Lock is ignored; use <kbd>Shift</kbd> for capital letters (<kbd>T</kbd> ಟ, <kbd>t</kbd> ತ).</li>\
 <li>Shortcuts (Ctrl/Alt/Win) always pass straight through.</li>\

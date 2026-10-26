@@ -49,6 +49,9 @@ pub static VOWELS: &[(&[&str], char, Option<char>)] = &[
     (&["o"], '\u{0C92}', Some('\u{0CCA}')),
     (&["O"], '\u{0C93}', Some('\u{0CCB}')),
     (&["au"], '\u{0C94}', Some('\u{0CCC}')),
+    // Vocalic L (rare; Vedic and Sanskrit texts).
+    (&[":l"], '\u{0C8C}', Some('\u{0CE2}')),
+    (&[":L"], '\u{0CE1}', Some('\u{0CE3}')),
 ];
 
 /// (roman spellings, consonant cluster string *without* trailing virama).
@@ -88,6 +91,7 @@ pub static CONSONANTS: &[(&[&str], &str)] = &[
     (&["Sh", "SH"], "\u{0CB7}"),
     (&["s"], "\u{0CB8}"),
     (&["h"], "\u{0CB9}"),
+    (&["zh"], "\u{0CDE}"), // ೞ  archaic Kannada LLLA (fa)
     // Conjunct shortcuts (virama is part of the cluster string).
     (&["x"], "\u{0C95}\u{0CCD}\u{0CB7}"),  // ಕ್ಷ  ksha
     (&["jn"], "\u{0C9C}\u{0CCD}\u{0C9E}"), // ಜ್ಞ  jna
@@ -96,7 +100,31 @@ pub static CONSONANTS: &[(&[&str], &str)] = &[
 ];
 
 /// Anusvara / visarga.
-pub static SIGNS: &[(&[&str], char)] = &[(&["M"], ANUSVARA), (&["H"], VISARGA)];
+pub static SIGNS: &[(&[&str], char)] = &[
+    (&["M"], ANUSVARA),
+    (&["H"], VISARGA),
+    (&[":M"], CANDRABINDU),
+];
+
+/// Candrabindu U+0C81 (ಁ).
+pub const CANDRABINDU: char = '\u{0C81}';
+/// Nukta U+0CBC, typed with `Q` right after a consonant (ಜ಼ ಡ಼ …).
+pub const NUKTA: char = '\u{0CBC}';
+
+/// Stand-alone characters that take no vowel sign and no virama:
+/// avagraha (ಽ, `ZZ` gives two), jihvamuliya (ೱ) and upadhmaniya (ೲ).
+pub static OTHERS: &[(&[&str], char)] = &[
+    (&["Z"], '\u{0CBD}'),
+    (&[":h"], '\u{0CF1}'),
+    (&[":H"], '\u{0CF2}'),
+];
+
+/// Kannada digits 0..9 (U+0CE6..U+0CEF).
+pub fn kannada_digit(c: char) -> Option<char> {
+    c.to_digit(10)
+        .filter(|_| c.is_ascii_digit())
+        .and_then(|d| char::from_u32(0x0CE6 + d))
+}
 
 /// Agama anusvara U+A8F3 (a Devanagari-block sign that Vedic Kannada texts use).
 /// It already contains the ga. The engine produces it only from the keys
@@ -153,6 +181,8 @@ pub enum Tok {
     },
     Consonant(&'static str),
     Sign(char),
+    Other(char),
+    Nukta,
     Accent(char),
     Break,
 }
@@ -194,6 +224,12 @@ pub fn table() -> &'static HashMap<&'static str, Tok> {
                 put(k, Tok::Sign(*sign));
             }
         }
+        for (keys, ch) in OTHERS {
+            for k in *keys {
+                put(k, Tok::Other(*ch));
+            }
+        }
+        put("Q", Tok::Nukta);
         for (keys, mark, _) in ACCENTS {
             for k in *keys {
                 put(k, Tok::Accent(*mark));
@@ -236,9 +272,9 @@ mod tests {
 
     #[test]
     fn table_builds_without_duplicates() {
-        // 21 vowel + 52 consonant (incl. x, jn, f) + 2 sign + 6 accent + 1 break
-        // spellings. Update this number when you edit the tables.
-        assert_eq!(table().len(), 82);
+        // 23 vowel + 53 consonant (incl. x, jn, f, zh) + 3 sign + 3 other
+        // + Q + 6 accent + 1 break spellings. Update when you edit the tables.
+        assert_eq!(table().len(), 90);
     }
 
     #[test]
@@ -252,20 +288,28 @@ mod tests {
     }
 
     #[test]
+    fn digits_map_to_kannada() {
+        assert_eq!(kannada_digit('0'), Some('೦'));
+        assert_eq!(kannada_digit('9'), Some('೯'));
+        assert_eq!(kannada_digit('a'), None);
+        assert_eq!(kannada_digit('٣'), None); // only ASCII digits
+    }
+
+    #[test]
     fn virama_is_u0ccd() {
         assert_eq!(VIRAMA as u32, 0x0CCD);
     }
 
     #[test]
     fn key_classes() {
-        for c in "kgRaAMH~:`xjSsfTKGJPB".chars() {
+        for c in "kgRaAMH~:`xjSsfTKGJPBZQz".chars() {
             assert!(is_phonetic_key(c), "{c} should be phonetic");
         }
         for c in "'\"^_\\".chars() {
             assert!(is_accent_key(c), "{c} should be an accent key");
             assert!(!is_phonetic_key(c), "{c} must not be phonetic");
         }
-        for c in " 1.,?!;QqZzWYXFV".chars() {
+        for c in " 1.,?!;qWYXFV".chars() {
             assert!(!is_phonetic_key(c), "{c:?} should pass through");
         }
     }

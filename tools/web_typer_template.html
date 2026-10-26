@@ -1,13 +1,12 @@
 <title>Kannada Vedic Typer</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Layout: one working column. Switch + editor first, live inspector beside examples, reference last. */
 @font-face{font-family:"KVL";src:url(data:font/ttf;base64,__FONT__) format("truetype");font-display:block}
 :root{
   --bg:#f2f3f6;--surface:#ffffff;--fg:#1a1d25;--muted:#5a6270;--line:#d8dbe2;
   --accent:#b8500a;--accent-ink:#ffffff;--soft:#fbeadb;--ok:#1f7a45;--off:#8a909c;
-  --ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Consolas,Menlo,"Liberation Mono",monospace;
   --kn:"KVL","Noto Sans Kannada","Nirmala UI",sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -47,6 +46,21 @@ dd.kn{font-family:var(--kn);font-size:1.6rem;line-height:2}
 .note{color:var(--muted);font-size:.85rem;margin:10px 0 0}
 details{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
 summary{cursor:pointer;font-weight:600}
+
+/* varnamale key chart */
+.vm{display:flex;flex-direction:column;gap:18px;margin-top:14px}
+.vm h3{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.vg{display:grid;gap:6px;grid-template-columns:repeat(5,minmax(0,1fr));max-width:560px}
+.vg.v{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));max-width:none}
+.kc{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:4px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0;text-align:center}
+.kc:hover{border-color:var(--accent)}
+.kc .g{font:30px/1.7 var(--kn)}
+.kc .k{font:600 13px/1.3 var(--mono);overflow-wrap:anywhere}
+.kc .k i{font-style:normal;font-weight:400;color:var(--muted)}
+.kc .s{font:15px/1.4 var(--kn);color:var(--muted)}
+.vm h3 .kh{font:600 1.05rem/1.6 var(--kn);letter-spacing:0;text-transform:none;color:var(--fg);margin-right:8px}
+.vnote{color:var(--muted);font-size:.85rem;margin:0}
+.vnote code,.note code{font-family:var(--mono)}
 .tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:14px}
 table{border-collapse:collapse;width:100%;font-size:.88rem}
 th{text-align:left;color:var(--muted);font-weight:500;padding:3px 8px 3px 0;border-bottom:1px solid var(--line)}
@@ -71,6 +85,11 @@ details.cv summary{margin-bottom:0}
 .cv-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .cv-ctl button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 12px}
 .cv-ctl button:hover{border-color:var(--accent)}
+footer{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:14px}
+footer button,footer a.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 10px;color:var(--fg);text-decoration:none;font-size:.85rem}
+footer button:hover,footer a.btn:hover{border-color:var(--accent)}
+footer .sp{margin-left:auto}
+.ck{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
 </style>
 
 <main>
@@ -81,6 +100,7 @@ details.cv summary{margin-bottom:0}
     </div>
     <div class="switch">
       <button class="toggle" id="vedic" type="button" aria-pressed="true"><span class="dot"></span><span id="vedicLabel">Vedic mode ON</span></button>
+      <button class="toggle" id="digits" type="button" aria-pressed="true"><span class="dot"></span><span id="digitsLabel">Kannada digits ON</span></button>
       <button class="toggle" id="power" type="button" aria-pressed="true"><span class="dot"></span><span id="powerLabel">Kannada ON</span></button>
     </div>
   </header>
@@ -101,10 +121,12 @@ details.cv summary{margin-bottom:0}
       <div class="ctl">
         <label for="trMode" class="note" style="margin:0">Show as</label>
         <select id="trMode">
-          <option value="iast">IAST (scholarly)</option>
+          <option value="iso">ISO 15919</option>
+          <option value="iast">IAST</option>
           <option value="simple">Simple English</option>
           <option value="deva">Devanagari</option>
         </select>
+        <label class="ck"><input type="checkbox" id="trLow" checked> underline the lower bar</label>
         <button type="button" id="trCopy">Copy</button>
         <button type="button" id="trSave">Save (.txt)</button>
       </div>
@@ -120,7 +142,7 @@ details.cv summary{margin-bottom:0}
         <label for="cvMode" class="note" style="margin:0">Pasted text is</label>
         <select id="cvMode">
           <option value="deva">Devanagari</option>
-          <option value="iast">IAST (with diacritics)</option>
+          <option value="iast">IAST or ISO 15919 (with diacritics)</option>
           <option value="phon">Phonetic English (as you would type it)</option>
         </select>
         <select id="cvEo" aria-label="Meaning of e and o in IAST">
@@ -159,9 +181,16 @@ details.cv summary{margin-bottom:0}
 
   <details open>
     <summary>Keys and accents</summary>
-    <div class="tables" id="tables"></div>
-    <p class="note">Marks always end up in this order: letter, vowel sign, anusvara or visarga, Vedic mark. Capital <code>M</code> is the anusvara, lowercase <code>m</code> stays ಮ. A consonant followed by <code>M</code> or <code>H</code> gives the full letter plus the sign (<code>kM</code> = ಕಂ). Put the break key in between to keep the half letter: <code>c`H</code> = ಚ್ಃ. With Vedic mode on, <code>g`M</code> gives the single āgama anusvāra ꣳ (U+A8F3). Vedic mode off turns off the three accent keys and ꣳ, so quotes and apostrophes type normally. New capital keys: K G J P B S TH DH Sh. <code>:g</code> and <code>:j</code> give ಙ and ಞ without the tilde. The font is a modified copy of Goda (SIL Open Font License), renamed Kaveri, embedded in this page.</p>
+    <div class="vm" id="vm"></div>
+    <p class="note">Marks always end up in this order: letter, vowel sign, anusvara or visarga, Vedic mark. Capital <code>M</code> is the anusvara, lowercase <code>m</code> stays ಮ. A consonant followed by <code>M</code> or <code>H</code> gives the full letter plus the sign (<code>kM</code> = ಕಂ). Put the break key in between to keep the half letter: <code>c`H</code> = ಚ್ಃ. With Vedic mode on, <code>g`M</code> gives the single āgama anusvāra ꣳ (U+A8F3). Vedic mode off turns off the three accent keys and ꣳ, so quotes and apostrophes type normally. <code>Q</code> right after a consonant adds the nukta (<code>jQa</code> = ಜ಼). The number keys type Kannada digits unless you switch them off at the top. The font is Arkavathi, a modified copy of Goda (SIL Open Font License), embedded in this page.</p>
   </details>
+  <footer>
+    <span>Version <span id="ver"></span></span>
+    <span>Nothing you type leaves your browser.</span>
+    <span class="sp"></span>
+    <button type="button" id="bug">Copy bug report</button>
+    <a class="btn" href="https://github.com/fellowshipofhogwarts/kannada-vedic-ime/issues/new/choose" target="_blank" rel="noopener">Report on GitHub</a>
+  </footer>
 </main>
 
 <script>
@@ -171,14 +200,17 @@ const c=h=>String.fromCharCode(h);
 const VOWELS=[[["a"],c(0xC85),null],[["aa","A"],c(0xC86),c(0xCBE)],[["i"],c(0xC87),c(0xCBF)],[["ii","I","ee"],c(0xC88),c(0xCC0)],
 [["u"],c(0xC89),c(0xCC1)],[["uu","U","oo"],c(0xC8A),c(0xCC2)],[["RRi","Ru"],c(0xC8B),c(0xCC3)],[["RRI","RU"],c(0xCE0),c(0xCC4)],
 [["e"],c(0xC8E),c(0xCC6)],[["E"],c(0xC8F),c(0xCC7)],[["ai"],c(0xC90),c(0xCC8)],[["o"],c(0xC92),c(0xCCA)],
-[["O"],c(0xC93),c(0xCCB)],[["au"],c(0xC94),c(0xCCC)]];
+[["O"],c(0xC93),c(0xCCB)],[["au"],c(0xC94),c(0xCCC)],
+[[":l"],c(0xC8C),c(0xCE2)],[[":L"],c(0xCE1),c(0xCE3)]];
 const CONS=[[["k"],0xC95],[["K","kh"],0xC96],[["g"],0xC97],[["G","gh"],0xC98],[["~g",":g"],0xC99],[["c","ch"],0xC9A],[["C","Ch","chh"],0xC9B],
 [["j"],0xC9C],[["J","jh"],0xC9D],[["~j",":j"],0xC9E],[["T"],0xC9F],[["TH","Th"],0xCA0],[["D"],0xCA1],[["DH","Dh"],0xCA2],[["N"],0xCA3],
 [["t"],0xCA4],[["th"],0xCA5],[["d"],0xCA6],[["dh"],0xCA7],[["n"],0xCA8],[["p"],0xCAA],[["P","ph"],0xCAB],[["b"],0xCAC],
 [["B","bh"],0xCAD],[["m"],0xCAE],[["y"],0xCAF],[["r"],0xCB0],[["l"],0xCB2],[["L"],0xCB3],[["v","w"],0xCB5],[["S","sh"],0xCB6],
-[["Sh","SH"],0xCB7],[["s"],0xCB8],[["h"],0xCB9]].map(([k,h])=>[k,c(h)]);
+[["Sh","SH"],0xCB7],[["s"],0xCB8],[["h"],0xCB9],[["zh"],0xCDE]].map(([k,h])=>[k,c(h)]);
 CONS.push([["x"],c(0xC95)+VIRAMA+c(0xCB7)],[["jn"],c(0xC9C)+VIRAMA+c(0xC9E)],[["f"],c(0xCAB)+c(0xCBC)]);
-const SIGNS=[[["M"],ANUSVARA],[["H"],VISARGA]];
+const SIGNS=[[["M"],ANUSVARA],[["H"],VISARGA],[[":M"],"\u0C81"]];
+const OTHERS=[[["Z"],"\u0CBD"],[[":h"],"\u0CF1"],[[":H"],"\u0CF2"]];
+const NUKTA="\u0CBC",VERSION="0.5.0";
 const AGAMAS=[]; /* MM no longer special: the agama sign comes only from g`M (Vedic mode) */
 const ACCENTS=[[["'","^"],UDATTA,"Udatta"],[["_","\\"],ANUDATTA,"Anudatta"],[['"',"^^"],DSV,"Svarita / double svarita"]];
 const BREAK="`";
@@ -189,12 +221,14 @@ const TABLE=new Map();
 for(const [ks,i,m] of VOWELS)for(const k of ks)TABLE.set(k,{t:"v",i,m});
 for(const [ks,cl] of CONS)for(const k of ks)TABLE.set(k,{t:"c",cl});
 for(const [ks,s] of SIGNS)for(const k of ks)TABLE.set(k,{t:"s",s});
+for(const [ks,s] of OTHERS)for(const k of ks)TABLE.set(k,{t:"o",s});
+TABLE.set("Q",{t:"n"});
 for(const [ks,s] of AGAMAS)for(const k of ks)TABLE.set(k,{t:"g",s});
 for(const [ks,mk] of ACCENTS)for(const k of ks)TABLE.set(k,{t:"a",mk});
 TABLE.set(BREAK,{t:"b"});
 const FIRST=new Set([...TABLE.keys()].map(k=>k[0]));
 const ACC_FIRST=new Set(ACCENTS.flatMap(([ks])=>ks.map(k=>k[0])));
-let vedic=true;
+let vedic=true,kd=true;
 const isFirst=ch=>FIRST.has(ch)&&(vedic||!ACC_FIRST.has(ch));
 const lookup=k=>{const t=TABLE.get(k);return t&&!vedic&&(t.t==="a"||t.t==="g")?null:t};
 
@@ -230,6 +264,11 @@ function render(roman){
           const st=marksStart(out),mk=out.splice(st).sort((a,b)=>ccc(a)-ccc(b));out.push(...mk);
         }else{out.push(...cps.slice(i,i+len));pending=false}
         afterBreak=false;break;
+      case"o":out.push(hit.s);pending=attach=afterBreak=false;break;
+      case"n":
+        if(pending&&out[out.length-2]!==NUKTA){out.pop();out.push(NUKTA,VIRAMA)}
+        else{out.push("Q");pending=attach=false}
+        afterBreak=false;break;
       case"b":afterBreak=true;break;
     }
     i+=len;
@@ -251,7 +290,10 @@ const TR_C={0xC95:["k","k"],0xC96:["kh","kh"],0xC97:["g","g"],0xC98:["gh","gh"],
  0xCA7:["dh","dh"],0xCA8:["n","n"],0xCAA:["p","p"],0xCAB:["ph","ph"],0xCAC:["b","b"],0xCAD:["bh","bh"],0xCAE:["m","m"],0xCAF:["y","y"],0xCB0:["r","r"],
  0xCB1:["ṟ","r"],0xCB2:["l","l"],0xCB3:["ḷ","l"],0xCB5:["v","v"],0xCB6:["ś","sh"],0xCB7:["ṣ","sh"],0xCB8:["s","s"],0xCB9:["h","h"],0xCDE:["ḻ","zh"]};
 const TR_DIG="0123456789";
-function translit(text,mode){
+TR_V[0xCE1]=["ḹ","luu"];TR_M[0xCE2]=0xC8C;TR_M[0xCE3]=0xCE1;
+/* ISO 15919 writes the vocalic letters with a ring below */
+const ISO_V={0xC8B:"r\u0325",0xCE0:"r\u0325\u0304",0xC8C:"l\u0325",0xCE1:"l\u0325\u0304"};
+function translit(text,mode,lowBar){
   const cps=Array.from(text).map(ch=>ch.codePointAt(0));
   if(mode==="deva"){
     return cps.map(x=>{
@@ -259,8 +301,10 @@ function translit(text,mode){
       return x>=0xC80&&x<=0xCEF?String.fromCodePoint(x-0x380):String.fromCodePoint(x);
     }).join("");
   }
-  const k=mode==="simple"?1:0,out=[];let lastV=-1,i=0;
-  const pushV=code=>{out.push(TR_V[code][k]);lastV=out.length-1};
+  const k=mode==="simple"?1:0,iso=mode==="iso",out=[];let lastV=-1,i=0;
+  /* Rigveda printing convention: upper bar = grave, lower bar = underline, double bar = double grave */
+  const MK={0x951:"\u0300",0x952:lowBar?"\u0331":"",0x1CDA:"\u030F"};
+  const pushV=code=>{out.push(iso&&ISO_V[code]?ISO_V[code]:TR_V[code][k]);lastV=out.length-1};
   while(i<cps.length){
     const x=cps[i];
     if(TR_C[x]){
@@ -272,14 +316,16 @@ function translit(text,mode){
       continue;
     }
     if(TR_V[x]){pushV(x);i++;continue}
-    if(x===0xC82){out.push(k?"m":"ṃ");i++;continue}
+    if(x===0xC82){out.push(k?"m":iso?"ṁ":"ṃ");i++;continue}
     if(x===0xC83){out.push(k?"h":"ḥ");i++;continue}
     if(x===0xC81){out.push(k?"m":"m̐");i++;continue}
-    if(x===0xA8F3){out.push(k?"gm":"gm̐");i++;continue}
+    if(x===0xA8F3){out.push(k?"gm":"gm̐");lastV=out.length-1;i++;continue}
     if(x===0xCBD){out.push("’");i++;continue}
+    if(x===0xCF1){out.push(k?"h":"ẖ");i++;continue}
+    if(x===0xCF2){out.push(k?"h":"ḫ");i++;continue}
     if(x>=0xCE6&&x<=0xCEF){out.push(TR_DIG[x-0xCE6]);i++;continue}
     if(x===0x951||x===0x952||x===0x1CDA){
-      if(!k&&lastV>=0)out[lastV]+=(x===0x951?"́":x===0x952?"̱":"̋");
+      if(!k&&lastV>=0)out[lastV]+=MK[x];
       i++;continue;
     }
     out.push(String.fromCodePoint(x));lastV=-1;i++;
@@ -287,13 +333,15 @@ function translit(text,mode){
   return out.join("");
 }
 const TR_NOTES={
-  iast:"IAST / ISO 15919 style: ē and ō are kept apart from e and o. Vedic marks sit on the vowel: acute (´) for the upper mark, underline for the lower mark, double acute for the double svarita.",
+  iso:"ISO 15919, the international standard for Indian scripts: ē and ō are long, vocalic r is r̥, the anusvara is ṁ. Vedic marks follow the Rigveda printing convention: grave (à) for the upper bar, underline (a̱) for the lower bar, double grave (ȁ) for the double bar.",
+  iast:"IAST: ē and ō are long, vocalic r is ṛ, the anusvara is ṃ. Vedic marks follow the Rigveda printing convention: grave (à) for the upper bar, underline (a̱) for the lower bar, double grave (ȁ) for the double bar.",
   simple:"Plain letters only, no accents: ā = aa, ī = ee, ū = oo, ṛ = ru, ś and ṣ = sh. Vedic marks are left out.",
-  deva:"Each Kannada letter is swapped for the matching Devanagari letter. Vedic marks are kept."};
+  deva:"Each Kannada letter is swapped for the matching Devanagari letter. Vedic marks are kept. On an iPhone, Safari may show some of these letters as empty boxes because it has no font for them here; the text is still correct, so copy it into another app."};
 function updateTr(){
   const m=document.getElementById("trMode").value,o=document.getElementById("trOut");
-  const v=document.getElementById("ta").value;
-  o.textContent=v?translit(v,m):"–";o.classList.toggle("deva",m==="deva");
+  const v=document.getElementById("ta").value,low=document.getElementById("trLow");
+  low.parentElement.hidden=!(m==="iso"||m==="iast");
+  o.textContent=v?translit(v,m,low.checked):"–";o.classList.toggle("deva",m==="deva");
   document.getElementById("trNote").textContent=TR_NOTES[m];
 }
 
@@ -314,7 +362,8 @@ const I_C={"k":0xC95,"kh":0xC96,"g":0xC97,"gh":0xC98,"ṅ":0xC99,"c":0xC9A,"ch":
  "ś":0xCB6,"ṣ":0xCB7,"s":0xCB8,"h":0xCB9,"ḻ":0xCDE};
 const I_FIX={"á":"á","é":"é","í":"í","ó":"ó","ú":"ú","à":"à","è":"è","ì":"ì","ò":"ò","ù":"ù",
  "ḗ":"ḗ","ṓ":"ṓ","ḕ":"ḕ","ṑ":"ṑ","ṁ":"ṃ"};
-const I_ACC={0x301:UDATTA,0x300:ANUDATTA,0x331:ANUDATTA,0x30B:DSV};
+Object.assign(I_FIX,{"\u0201":"a\u030F","\u0205":"e\u030F","\u0209":"i\u030F","\u020D":"o\u030F","\u0215":"u\u030F"});
+const I_ACC={0x300:UDATTA,0x301:UDATTA,0x331:ANUDATTA,0x30F:DSV,0x30B:DSV};
 function iastToKannada(text,eoLong){
   let t=text.normalize("NFC").toLowerCase().replace(/r\u0325\u0304|ṝ/g,"ṝ").replace(/r\u0325/g,"ṛ"); /* r with ring below = ṛ */
   t=Array.from(t).map(ch=>I_FIX[ch]||ch).join("");
@@ -344,7 +393,7 @@ function iastToKannada(text,eoLong){
 }
 const CV_NOTES={
   deva:"Each Devanagari letter is swapped for the matching Kannada letter. Vedic marks stay as they are. Letters that Kannada does not have are left unchanged.",
-  iast:"A consonant with no vowel after it gets the virama (half letter). Acute (´) becomes the upper Vedic mark, grave or underline the lower mark, double acute the double svarita. gm̐ becomes ꣳ.",
+  iast:"A consonant with no vowel after it gets the virama (half letter). Grave (à) or acute becomes the upper Vedic mark, underline the lower mark, double grave or double acute the double bar. gm̐ becomes ꣳ.",
   phon:"Runs the same engine as the typing box on the whole text, so capital letters matter: T = ಟ, t = ತ. Apostrophes after a letter become Vedic marks (turn Vedic mode off to avoid that)."};
 function convertText(txt,mode){
   if(mode==="deva")return devaToKannada(txt);
@@ -391,6 +440,7 @@ function caretOK(){
 }
 function apply(next){const p=ta.selectionStart;ta.setRangeText(next,p-shown.length,p,"end");updateTr()}
 function press(ch){
+  if(on&&kd&&/^[0-9]$/.test(ch)){reset();const d=String.fromCharCode(0xCE6+Number(ch));apply(d);inspect({back:0,text:d});return true}
   if(!on||!isFirst(ch)){reset();return false}
   if(!caretOK()){buf="";shown=""}
   if(buf.length>40){buf="";shown=""}
@@ -418,6 +468,9 @@ ta.addEventListener("pointerdown",reset);ta.addEventListener("blur",()=>{buf="";
 const power=$("#power");
 function setOn(v){on=v;power.setAttribute("aria-pressed",v);$("#powerLabel").textContent=v?"Kannada ON":"English (off)";reset();ta.focus()}
 power.addEventListener("click",()=>setOn(!on));
+const dbtn=$("#digits");
+function setDigits(v){kd=v;refreshChips();dbtn.setAttribute("aria-pressed",v);$("#digitsLabel").textContent=v?"Kannada digits ON":"Digits 0-9";reset();ta.focus()}
+dbtn.addEventListener("click",()=>setDigits(!kd));
 const vbtn=$("#vedic");
 function setVedic(v){vedic=v;vbtn.setAttribute("aria-pressed",v);$("#vedicLabel").textContent=v?"Vedic mode ON":"Vedic mode OFF";reset();refreshChips();updateCv();ta.focus()}
 vbtn.addEventListener("click",()=>setVedic(!vedic));
@@ -434,12 +487,13 @@ $("#theme").addEventListener("click",()=>{
   if(t)r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");
   $("#theme").textContent="Theme: "+tl[themeState];
 });
-const EX=["namaste","kannaDa","saMskRuta","jnaana","Siva","Baarata","Pala","agni'mILE'","ka_","ka\"","kaM'","gM","g`M'","c`H","k`M",":ga",":ja","SaH"];
+const EX=["namaste","kannaDa","saMskRuta","jnaana","Siva","Baarata","Pala","agni'mILE'","ka_","ka\"","kaM'","gM","g`M'","c`H","k`M",":ga",":ja","SaH","jQa","zha","ZZ","2026"];
 const chips=$("#chips");
+const chipText=r=>/^[0-9]+$/.test(r)?(kd?Array.from(r,d=>String.fromCharCode(0xCE6+Number(d))).join(""):r):render(r);
 for(const r of EX){
   const b=document.createElement("button");b.type="button";b.className="chip";
   b.innerHTML="<span></span><code></code>";b.querySelector("code").textContent=r;
-  b.querySelector("span").textContent=render(r);b.dataset.r=r;
+  b.querySelector("span").textContent=chipText(r);b.dataset.r=r;
   b.addEventListener("click",()=>{
     const was=on;on=true;ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
     if(ta.value&&!/\s$/.test(ta.value))ta.setRangeText(" ",ta.value.length,ta.value.length,"end");
@@ -447,22 +501,66 @@ for(const r of EX){
   });
   chips.appendChild(b);
 }
-function refreshChips(){for(const b of chips.children)b.querySelector("span").textContent=render(b.dataset.r)}
-/* reference tables */
-function tbl(title,rows){
-  const d=document.createElement("div");
-  d.innerHTML="<table><thead><tr><th>Type</th><th>Result</th></tr></thead><tbody></tbody></table>";
-  d.querySelector("th").textContent=title;
-  const tb=d.querySelector("tbody");
-  for(const [k,v] of rows){const tr=document.createElement("tr");
-    const a=document.createElement("td");a.textContent=k;const b=document.createElement("td");b.className="kn";b.textContent=v;
-    tr.append(a,b);tb.append(tr)}
+function refreshChips(){for(const b of chips.children)b.querySelector("span").textContent=chipText(b.dataset.r)}
+/* varnamale key chart: click a box to put that letter in the typing box */
+function insertText(t){
+  ta.focus();const a=ta.selectionStart,b=ta.selectionEnd;
+  ta.setRangeText(t,a,b,"end");reset();updateTr();
+}
+function cell(g,keys,o={}){
+  const b=document.createElement("button");b.type="button";b.className="kc";
+  const gl=document.createElement("span");gl.className="g";gl.textContent=o.show||g;
+  const k=document.createElement("span");k.className="k";
+  const first=document.createElement("span");first.textContent=keys[0];k.append(first);
+  for(const x of keys.slice(1)){const i=document.createElement("i");i.textContent=" "+x;k.append(i)}
+  b.append(gl,k);
+  if(o.sample){const s2=document.createElement("span");s2.className="s";s2.textContent=o.sample;b.append(s2)}
+  b.title="Click to type "+(o.ins||g)+" into the box";
+  b.addEventListener("click",()=>insertText(o.ins||g));
+  return b;
+}
+function grid(cls,items){const d=document.createElement("div");d.className="vg "+cls;for(const it of items)d.append(it);return d}
+function section(title,node,note,kn){
+  const d=document.createElement("div");const h=document.createElement("h3");
+  if(kn){const k=document.createElement("span");k.className="kh";k.textContent=kn;h.append(k)}
+  h.append(kn?"("+title+")":title);d.append(h,node);
+  if(note){const p=document.createElement("p");p.className="vnote";p.innerHTML=note;d.append(p)}
   return d;
 }
-const T=$("#tables");
-T.append(tbl("Vowels",VOWELS.map(([k,i,m])=>[k.join(" "),i+(m?"  ಕ"+m:"")])));
-T.append(tbl("Signs and marks",[["kM or kaM","ಕಂ"],["kH","ಕಃ"],["gM","ಗಂ"],["k`M","ಕ್ಂ"],["c`H","ಚ್ಃ"],["g`M (Vedic on)",AGAMA],["g`M (Vedic off)","ಗ್ಂ"],["' or ^ (Vedic)","ಕ"+UDATTA],["_ or \\ (Vedic)","ಕ"+ANUDATTA],["\" or ^^ (Vedic)","ಕ"+DSV],["`  (German: Shift+´)","break"]]));
-T.append(tbl("Consonants",CONS.map(([k,cl])=>[k.join(" "),cl])));
+const VM=$("#vm"),KA="\u0C95";
+const vow=VOWELS.map(([k,i,m])=>cell(i,k,{sample:m?KA+m:""}));
+VM.append(section("Vowels",grid("v",vow),"Under each vowel: its sign on ಕ.","ಸ್ವರಗಳು"));
+const yv=[cell("\u0C82",["M"],{show:"\u0C85\u0C82",sample:"ಅನುಸ್ವಾರ"}),cell("\u0C83",["H"],{show:"\u0C85\u0C83",sample:"ವಿಸರ್ಗ"})];
+VM.append(section("Yogavahas",grid("v",yv),
+ "Capital <code>M</code> is the anusvara and <code>m</code> stays ಮ. <code>kM</code> = ಕಂ, <code>kH</code> = ಕಃ. To keep the half letter put the break key <code>`</code> before it: <code>k`M</code> = ಕ್ಂ, <code>c`H</code> = ಚ್ಃ.","ಯೋಗವಾಹಿಗಳು"));
+const R=(g,...k)=>cell(g,k);
+const vargas=[
+ [["\u0C95","k"],["\u0C96","K","kh"],["\u0C97","g"],["\u0C98","G","gh"],["\u0C99",":g","~g"]],
+ [["\u0C9A","c","ch"],["\u0C9B","C","Ch","chh"],["\u0C9C","j"],["\u0C9D","J","jh"],["\u0C9E",":j","~j"]],
+ [["\u0C9F","T"],["\u0CA0","TH","Th"],["\u0CA1","D"],["\u0CA2","DH","Dh"],["\u0CA3","N"]],
+ [["\u0CA4","t"],["\u0CA5","th"],["\u0CA6","d"],["\u0CA7","dh"],["\u0CA8","n"]],
+ [["\u0CAA","p"],["\u0CAB","P","ph"],["\u0CAC","b"],["\u0CAD","B","bh"],["\u0CAE","m"]]];
+const cons=vargas.flat().map(([g,...k])=>R(g,...k));
+VM.append(section("Varga consonants",grid("",cons),"Rows are the five vargas: ka, ca, ṭa, ta, pa.","ವರ್ಗೀಯ ವ್ಯಂಜನಗಳು"));
+const rest=[["\u0CAF","y"],["\u0CB0","r"],["\u0CB2","l"],["\u0CB5","v","w"],["\u0CB6","S","sh"],
+ ["\u0CB7","Sh","SH"],["\u0CB8","s"],["\u0CB9","h"],["\u0CB3","L"]].map(([g,...k])=>R(g,...k));
+VM.append(section("Non-varga consonants",grid("",rest),"","ಅವರ್ಗೀಯ ವ್ಯಂಜನಗಳು"));
+const more=[["\u0C95\u0CCD\u0CB7","x"],["\u0C9C\u0CCD\u0C9E","jn"],["\u0CAB\u0CBC","f"]].map(([g,...k])=>R(g,...k));
+more.push(cell("\u0CDE",["zh"]));
+VM.append(section("Other letters",grid("",more),"Joined letters ksha and jna, the nukta form pha, the archaic ḻa, and the nukta key <code>Q</code> after a consonant (<code>jQa</code> = ಜ಼).","ಇತರ ಅಕ್ಷರಗಳು"));
+const sg=[
+ cell("\u0C81",[":M"],{show:"\u0C85\u0C81"}),cell("\u0CBD",["Z"]),
+ cell("\u0CF1",[":h"]),cell("\u0CF2",[":H"]),cell("\u0CBC",["Q"],{show:KA+"\u0CBC"})];
+VM.append(section("Signs",grid("",sg),
+ "<code>ZZ</code> gives ಽಽ. <code>Q</code> goes right after a consonant.","ಚಿಹ್ನೆಗಳು"));
+const vd=[
+ cell(UDATTA,["'","^"],{show:"\u0C85"+UDATTA}),cell(ANUDATTA,["_","\\"],{show:"\u0C85"+ANUDATTA}),
+ cell(DSV,['"',"^^"],{show:"\u0C85"+DSV}),cell(AGAMA,["g`M"],{show:AGAMA})];
+VM.append(section("Vedic accents",grid("",vd),
+ "Shown with Vedic mode on: upper bar, lower bar, double bar and the single āgama sign ꣳ. With Vedic mode off these keys type normally.","ವೈದಿಕ ಸ್ವರಗಳು"));
+const dg=[...Array(10).keys()].map(n=>cell(String.fromCharCode(0xCE6+n),[String(n)]));
+VM.append(section("Digits",grid("",dg),"The number keys type these by default. Use the switch at the top to get 0-9 back.","ಅಂಕಿಗಳು"));
+const nt=document.createElement("p");nt.className="vnote";nt.textContent="Click any box to put that letter in the typing box.";VM.append(nt);
 ta.addEventListener("input",updateTr);
 $("#save").addEventListener("click",async()=>{if(await saveText("kannada-text.txt",ta.value))flash($("#save"),"Saved")});
 $("#trSave").addEventListener("click",async()=>{const t=$("#trOut").textContent;if(await saveText("transliteration-"+$("#trMode").value+".txt",t))flash($("#trSave"),"Saved")});
@@ -486,6 +584,15 @@ $("#trCopy").addEventListener("click",async()=>{
   try{await navigator.clipboard.writeText(t==="–"?"":t);$("#trCopy").textContent="Copied"}
   catch(e){const r=document.createRange();r.selectNodeContents($("#trOut"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);$("#trCopy").textContent="Selected, press Ctrl+C"}
   setTimeout(()=>$("#trCopy").textContent="Copy",1800);
+});
+$("#ver").textContent=VERSION;
+$("#bug").addEventListener("click",async()=>{
+  const t=["Kannada Vedic Typer "+VERSION,"Browser: "+navigator.userAgent,
+   "Kannada typing: "+(on?"on":"off"),"Vedic mode: "+(vedic?"on":"off"),"Kannada digits: "+(kd?"on":"off"),
+   "Keys in this word: "+(buf||"-"),"Shown: "+(shown||"-"),"Code points: "+(shown?cp(shown):"-"),
+   "","What I typed:","What I expected:","What I saw:"].join("\n");
+  try{await navigator.clipboard.writeText(t);flash($("#bug"),"Copied, paste it into the report")}
+  catch(e){flash($("#bug"),"Copy not allowed here")}
 });
 updateTr();
 setOn(true);ta.blur();reset();

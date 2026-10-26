@@ -1,13 +1,18 @@
-Kannada Vedic IME - quick start (Windows)
+Kannada Vedic IME 0.5.0 - quick start (Windows)
 
-1. Install the font: double-click Kaveri.ttf, then click Install.
-   (If you had "Kannada Vedic Long" before, uninstall it first: Settings > Personalization > Fonts.)
+1. Install the font: double-click Arkavathi.ttf, then click Install.
+   (If you had "Kaveri" or "Kannada Vedic Long" before, uninstall it first:
+   Settings > Personalization > Fonts. Arkavathi is the new name of Kaveri.)
 2. Double-click kannada_ime.exe. A saffron tray icon with the letter ka appears
    near the clock (click the ^ arrow if you do not see it).
-3. Open a text box in a browser, Word or VS Code and choose the font "Kaveri".
-4. Type:  namaste   Siva   ka_   agni'mILE'   c`H   g`M'
+3. Open a text box in a browser, Word or VS Code and choose the font "Arkavathi".
+4. Type:  namaste   Siva   ka_   agni'mILE'   c`H   g`M'   jQa   zha   2026
    Ctrl+Shift+K switches Kannada typing on and off. Right-click the tray icon for the menu:
-   "Vedic mode" turns the accent keys on or off, and "Check for updates" opens the release page.
+   "Vedic mode" turns the accent keys on or off, "Kannada digits" switches the number keys
+   between ೧ ೨ ೩ and 1 2 3, and "Check for updates" opens the release page.
+
+New in 0.5.0: Z = ಽ, :h = ೱ, :H = ೲ, zh = ೞ, :l = ಌ, :L = ೡ, :M = ಁ, and Q after a
+consonant = nukta (jQa = ಜ಼). The number keys now type Kannada digits (switch in the tray menu).
 
 Windows may say "Windows protected your PC" because the program is not signed.
 Click "More info", then "Run anyway". Only do this for a copy you downloaded from the
@@ -20,5 +25,8 @@ AltGr characters such as ~ work too.
 
 To start it with Windows: press Win+R, type shell:startup, press Enter, and drop a
 shortcut to kannada_ime.exe into that folder.
+
+Privacy: no data is collected. The only network call is the optional update check to
+GitHub, which you can switch off in the tray menu.
 
 Licences: program MIT OR Apache-2.0, font SIL OFL 1.1 (OFL.txt).

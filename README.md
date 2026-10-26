@@ -1,222 +1,138 @@
-# kannada_ime
+# Kannada Vedic IME
 
-A tiny background agent (Rust) that turns phonetic English keystrokes into
-Kannada Unicode — Baraha-style, with Vedic accent marks — in any focused text
-field. System-tray control, hotkey toggle (`Ctrl+Shift+K`), native toasts.
+**Type Kannada with Vedic accents using plain English letters, in any app.** A tiny Windows tray program,
+a web typer and an experimental Linux input method. Free, open source, no account, and nothing leaves your computer.
+
+<!-- SCREENSHOT: replace this line with a picture or GIF of the web typer showing a Vedic word and the live inspector.
+     Example: ![The web typer showing agni'mILE'](docs/screenshot.png) -->
 
 ```
-namaste → ನಮಸ್ತೆ     kannaDa → ಕನ್ನಡ     saMskRRita → ಸಂಸ್ಕೃತ     jnaana → ಜ್ಞಾನ
-agni'   → ಅಗ್ನಿ॑      ka_ → ಕ॒              ka" → ಕ᳚                 ka^^ → ಕ᳚
+namaste → ನಮಸ್ತೆ      kannaDa → ಕನ್ನಡ      saMskRRita → ಸಂಸ್ಕೃತ      agni'mILE' → ಅಗ್ನಿ॑ಮೀಳೇ॑
 ```
 
-## How this was made
+**Who it is for:** people who type Vedic Kannada (Rigveda, Taittiriya Yajurveda and similar texts) and want
+real Unicode, so the text can be copied anywhere. It follows the Baraha style of typing, so it is quick to learn
+if you know Baraha.
 
-This project was **vibe coded extensively with [Claude](https://claude.ai)** (an AI assistant by Anthropic).
-I had set the goals, chose the typing scheme and the Vedic
-conventions, tested every version on Windows, and decided what to keep. Claude wrote most of the code,
-the tests, the web typer, the font-modification script and the documentation, in a long conversation.
+**Try it now, nothing to install:** <https://fellowshipofhogwarts.github.io/kannada-vedic-ime/>
 
-What that means for you:
+## Quick start
 
-* **Tested by use, not by audit.** The typing engine has automated tests, and the Windows program and
-  the Kaveri font have been used on one Windows PC. Nobody has done a professional code or security review.
-  The program listens to all keystrokes while it is switched on, so read the source in `src/hook/` if that
-  matters to you.
-* **Linux and macOS are untested.** The Linux code exists but has not been run on a real desktop.
-* **Check the Vedic text.** The mappings follow common Baraha-style conventions. Compare the output with
-  your own printed edition before relying on it for recitation or publishing, and open an issue if a sign
-  or accent order is wrong.
-* **The font is third-party work.** Kaveri is a small modification of Goda, which is itself derived from
-  Sampige (see Licence below). The credit for the letterforms belongs to those authors.
+**Windows**
+1. Download `kannada-vedic-ime-vX.Y.Z-windows.zip` from [Releases](../../releases) and unzip it.
+2. Double-click `Arkavathi.ttf` and click Install. (Upgrading from 0.4? Uninstall the old font **Kaveri** first. Arkavathi is its new name.)
+3. Double-click `kannada_ime.exe`. A tray icon appears near the clock.
+4. In Word, a browser or VS Code choose the font **Arkavathi** and type `namaste `. `Ctrl+Shift+K` switches Kannada typing on and off.
 
-## Download and use (Windows)
+Windows may warn "Windows protected your PC" because the program is not signed. Click *More info*, then *Run anyway*, for a copy
+from this page only.
 
-1. Download `kannada-vedic-ime-vX.Y.Z-windows.zip` from the **Releases** page.
-2. Unzip, double-click `Kaveri.ttf` → Install, then double-click `kannada_ime.exe`.
-3. Pick the font **Kaveri** in your editor and type. `Ctrl+Shift+K` toggles.
-4. Right-click the tray icon for **Vedic mode** (accent keys and ꣳ on or off, remembered),
-   **Check for updates** and the quick reference.
+**Linux (experimental)**: download the `.deb` from Releases, install it, run `ibus restart`, then follow [`linux/README-LINUX.md`](linux/README-LINUX.md).
 
-No install? Try the web typer (GitHub Pages, `docs/index.html`). It also shows the text in
-IAST, plain English or Devanagari, converts pasted Devanagari, IAST or phonetic text to
-Kannada, and saves the result as a `.txt` file.
+**Web**: open the typer above. The same engine runs in your browser.
 
-## Status — read this first
+## Typing reference
 
-| Part | State |
+Capital letters are the aspirates and the retroflexes. Consonants stay half (ಕ್) until a vowel arrives; `a` completes them (ಕ).
+
+| | Keys |
 |---|---|
-| `mapping.rs`, `engine.rs`, `guide.rs`, `state.rs`, `settings.rs`, `update.rs`, `hook/filter.rs` | Dependency-free; **50 unit tests pass**; engine output verified NFC/NFD-stable over thousands of random inputs |
-| `hook/win.rs`, `hook/linux.rs`, `inject.rs`, `tray.rs`, `main.rs` | Not compiled in the authoring sandbox (no crate access there); GitHub's CI builds them on Windows and Linux. The Windows hook, tray and update check have been used by hand only on one PC. Use the checklist in "Verify on Windows" below. |
-| Icons | ON icon is the Kannada letter ಕ (generated from the Kaveri font), OFF icon is "EN". Regenerate with `tools/make_icons.py --font <Kannada .ttf>`. |
+| **Vowels** ಸ್ವರಗಳು | `a` ಅ · `aa`/`A` ಆ · `i` ಇ · `ii`/`I`/`ee` ಈ · `u` ಉ · `uu`/`U`/`oo` ಊ · `RRi`/`Ru` ಋ · `RRI`/`RU` ೠ · `:l` ಌ · `:L` ೡ · `e` ಎ · `E` ಏ · `ai` ಐ · `o` ಒ · `O` ಓ · `au` ಔ |
+| **Yogavahas** ಯೋಗವಾಹಿಗಳು | `M` ಂ · `H` ಃ · `:M` ಁ |
+| **Varga** ವರ್ಗೀಯ ವ್ಯಂಜನಗಳು | `k K g G :g` ಕ ಖ ಗ ಘ ಙ · `c C j J :j` ಚ ಛ ಜ ಝ ಞ · `T TH D DH N` ಟ ಠ ಡ ಢ ಣ · `t th d dh n` ತ ಥ ದ ಧ ನ · `p P b B m` ಪ ಫ ಬ ಭ ಮ |
+| **Non-varga** ಅವರ್ಗೀಯ ವ್ಯಂಜನಗಳು | `y r l v S Sh s h L` ಯ ರ ಲ ವ ಶ ಷ ಸ ಹ ಳ |
+| **Other letters** ಇತರ ಅಕ್ಷರಗಳು | `x` ಕ್ಷ · `jn` ಜ್ಞ · `zh` ೞ · `f` ಫ಼ · `Q` after a consonant = nukta (`jQa` ಜ಼) |
+| **Signs** ಚಿಹ್ನೆಗಳು | `Z` ಽ (`ZZ` ಽಽ) · `:h` ೱ · `:H` ೲ |
+| **Vedic accents** ವೈದಿಕ ಸ್ವರಗಳು | `'` or `^` upper bar · `_` or `\` lower bar · `"` or `^^` double bar · `` g`M `` ꣳ |
+| **Digits** ಅಂಕಿಗಳು | the number keys type ೦ ೧ ೨ … ೯ (tray switch for 0-9) |
 
-## Layout
+The older spellings (`kh gh jh Th Dh ph bh sh`) still work. `th` and `dh` stay ಥ and ಧ.
 
-```
-Cargo.toml  build.rs  .cargo/config.toml
-docs/index.html  web typer (served by GitHub Pages)
-tools/web_typer_template.html  the web typer without its embedded font (build input)
-docs/GITHUB_SETUP.md  publishing steps
-.github/workflows  CI + release builds
-src/main.rs      CLI flags, wiring
-src/mapping.rs   Baraha + Vedic tables, lookup
-src/engine.rs    buffer → render → minimal Edit (+ tests)
-src/guide.rs     quick-reference HTML generated from the tables
-src/state.rs     ON/OFF + Vedic-mode flags, epoch, shared by threads
-src/settings.rs  Vedic mode + update check, remembered in a small text file
-src/update.rs    "newer release on GitHub?" (system curl, version compare)
-src/inject.rs    Edit → input (Unicode / clipboard strategies)
-src/hook/        win.rs (WH_KEYBOARD_LL + SendInput), linux.rs (rdev + enigo),
-                 filter.rs (LLKHF_INJECTED loop guard, pure + tested)
-src/tray.rs      tao event loop, tray-icon, notify-rust toasts
-assets/icons/    on_64.rgba, off_64.rgba, kannada_ime.ico
-docs/ARCHITECTURE.md   flow + state diagrams
-docs/Kaveri.pdf   font information sheet
-fonts/           Kaveri.ttf + OFL.txt (font licence)
-LICENSE-MIT, LICENSE-APACHE   code licence
-CHANGELOG.md     what changed in each version
-TYPOGRAPHY.md    line spacing (Word/LibreOffice/CSS/Inkscape) + FontForge GPOS anchors
-```
+**Useful rules**
+* Type an accent right after its syllable: `ka'` ಕ॑, `ka_` ಕ॒, `ka"` ಕ᳚. Whatever order you type marks in, the text is stored as letter, vowel sign, anusvara, Vedic mark (`ka'M` and `kaM'` are the same).
+* `M` is the anusvara; lowercase `m` stays ಮ, so `namaste` and `amma` work. `kM` gives ಕಂ. The break key `` ` `` keeps the half letter: `` k`M `` ಕ್ಂ, `` c`H `` ಚ್ಃ, and stops letters from merging (`` s`ha `` ಸ್ಹ, not ಶ).
+* **Vedic mode** (tray menu) turns the accent keys and ꣳ on or off. Off, quotes and apostrophes type normally.
+* Backspace removes the last keystroke of the current word, not the last letter. Space, Enter, arrows and clicks end the word.
+* On a German keyboard, Shift + `´` is the break key and `^` is the upper bar, with no Space needed.
 
-## Typing scheme (full tables: tray menu → quick reference)
+The tray menu opens a full quick reference that is generated from the same tables the engine uses.
 
-* Vowels `a aa/A i ii/I/ee u uu/U/oo RRi/Ru RRI/RU e E ai o O au`, `M` = ಂ, `H` = ಃ
-* Consonants: `k K g G :g/~g c C j J :j/~j T TH D DH N t th d dh n p P b B m y r l L v/w S Sh/SH s h`
-  (capitals are the aspirates: `K` ಖ, `G` ಘ, `J` ಝ, `TH` ಠ, `DH` ಢ, `P` ಫ, `B` ಭ, `S` ಶ, `Sh`/`SH` ಷ),
-  plus `x` = ಕ್ಷ, `jn` = ಜ್ಞ, `f` = ಫ಼. The older spellings (`kh gh jh Th Dh ph bh sh`) still work.
-  `th` and `dh` stay ಥ and ಧ. A visarga after ಶ ಟ ಡ needs the vowel: `SaH`, `TaH`, `DaH`.
-* Conjuncts: just type the consonants (`tatva` → ತತ್ವ)
-* `` ` `` = break (`s`ha` → ಸ್ಹ, not ಶ). On a German keyboard Shift + `´` is the break key without Space.
-* **Vedic accents**, typed right after the syllable:
-  `'` or `^` → U+0951 Udatta · `_` or `\` → U+0952 Anudatta ·
-  `"` or `^^` → U+1CDA double Svarita. Edit `ACCENTS` in `mapping.rs` to change.
-* **Anusvara is capital `M`** (U+0C82); `H` = visarga. Lowercase `m` stays ಮ, because
-  making it an anusvara would break `namaste`, `amma`, `kamala`.
-* **Full or half consonant before `M` / `H`:** `kM` → ಕಂ and `cH` → ಚಃ (full letter). Put the break key
-  in between for the half letter: `` k`M `` → ಕ್ಂ, `` c`H `` → ಚ್ಃ.
-* **Āgama anusvāra** (U+A8F3 ꣳ, already contains the ga): `` g`M `` (`` g`M' `` → ꣳ + Udatta), Vedic mode on.
-  Plain `gM` is ಗಂ like every other letter. Needs the tuned font from `tools/make_long_marks.py`.
-* **Vedic mode** (tray menu, on by default): switches the accent keys and ꣳ on or off. Off, the keys
-  `'` `"` `_` `^` type normally, so quotes and apostrophes work in poems and prose.
-* **Output order is always** base → matra → anusvara/visarga → Vedic mark, whatever
-  order you typed: `ka'M` and `kaM'` both give ಕಂ॑. Stacked marks follow Unicode
-  canonical order (U+0952 before U+0951/U+1CDA).
-* Accents and `M`/`H` do **not** end the word: Backspace removes just that mark,
-  and typing continues in the same word.
-* Backspace undoes the last keystroke of the current word.
+## How it works
 
-## Build
+Every key you press is added to a small buffer holding the roman letters of the current word. The engine re-renders
+the whole buffer into Kannada from scratch and replaces only what changed, usually with zero or one backspace.
+Because it starts over each time, combinations such as `k`, `ka`, `kaa`, `kh` or `ka'` need no special cases.
+On Windows a low-level keyboard hook sees the key, the engine decides, and the program types the Unicode text.
+On Linux the word is shown underlined in the application and committed when you press Space.
 
-### Windows (recommended target)
+## Technical details
+
+* **Tables** (`src/mapping.rs`): vowels, consonants, signs, stand-alone characters and accents. They drive the engine, the quick reference and the Linux tables (generated by `linux/tools/gen_tables.py`).
+* **Engine** (`src/engine.rs`): greedy longest match over tokens of up to three characters, then output ordering by Unicode combining class (U+0952 = 220 before U+0951 and U+1CDA = 230), so the text is already NFC/NFD-stable. The engine is pure logic with no OS calls.
+* **Accents** are Unicode marks from the Devanagari and Vedic Extensions blocks (U+0951, U+0952, U+1CDA, and U+A8F3 for the āgama anusvāra). The font must position them. See `TYPOGRAPHY.md`.
+* **Windows** (`src/hook/win.rs`): `WH_KEYBOARD_LL` hook; own `SendInput` events carry `LLKHF_INJECTED` and are skipped so the program never reads its own typing. Keys are resolved through the active layout, so AltGr and the German dead keys work.
+* **Linux** (`linux/`): an IBus engine in Python (a port of the same engine). A parity test compared it with the Rust engine on 30,000 random inputs with no differences. Python was chosen because IBus is a GObject service; the logic is small.
+* **Font Arkavathi**: Goda 1.0.5 with taller Vedic bars and Devanagari-script mark positioning, renamed because "Goda" is a Reserved Font Name. See `fonts/` and `docs/Arkavathi.pdf`.
+* **Web typer** (`docs/index.html`): one self-contained file with the font embedded, using system fonts only and making no outside requests. It is built by `tools/build_web.py`.
+* More: `docs/ARCHITECTURE.md`.
+
+## Build and configure
 
 ```powershell
-rustup target add x86_64-pc-windows-msvc
-python tools\make_icons.py --font C:\Windows\Fonts\Nirmala.ttf   # optional: real ಕ icon
-cargo build --release
-# -> target\release\kannada_ime.exe  (statically linked CRT, icon embedded)
+cargo test
+cargo build --release          # target\release\kannada_ime.exe
+cargo run -- --translit "agni'mILE'"   # check the mapping without any hooks
 ```
 
-Needs MSVC Build Tools (includes `rc.exe` for the icon). Optional extra shrink:
-`upx --best --lzma target\release\kannada_ime.exe` (may trigger antivirus
-heuristics — skip for distribution).
+Needs Rust and, on Windows, the MSVC Build Tools. On Linux, install the packages listed in `.github/workflows/ci.yml`.
+Options: `kannada_ime [--off] [--inject unicode|clipboard] [--translit TEXT] [--version]`. Use `--inject clipboard` if text appears garbled in some app.
+Windows autostart: put a shortcut in `shell:startup`.
 
-Cross-build from Linux: `rustup target add x86_64-pc-windows-gnu`,
-`sudo apt install mingw-w64`, `cargo build --release --target x86_64-pc-windows-gnu`.
+Settings are a small text file: `%APPDATA%\KannadaIME\settings.txt` on Windows and `~/.config/kannada-ime/settings.txt` on Linux
+(`vedic`, `kannada_digits`, `update_check`; 1 = on, 0 = off). Rebuild the web page with `python3 tools/build_web.py`
+and the Linux package with `linux/build_deb.sh`.
 
-### Verify on Windows (do this first)
-
-Open **PowerShell** in the project folder (the one containing `Cargo.toml`).
-
-```powershell
-rustup default stable-x86_64-pc-windows-msvc   # needs Visual Studio Build Tools (C++ workload)
-cargo check                  # type-checks everything incl. the Win32 hook; fix any API drift here
-cargo test                   # 50 tests; the engine, settings, update and filter tests run on any OS
-cargo build --release        # -> target\release\kannada_ime.exe
-.\target\release\kannada_ime.exe
-```
-
-Quick mapping check without hooks (works from a terminal with the release `.exe` too):
-
-```powershell
-cargo run -- --translit "agni'mILE'"        # -> ಅಗ್ನಿ॑ಮೀಳೇ॑
-```
-
-Manual hook checklist (Notepad, then Word and a browser text box):
-
-1. Tray icon appears (saffron/ON). `Ctrl+Shift+K` → icon turns gray "EN", a toast
-   appears; again → back to ON. Tray menu toggle does the same.
-2. In Notepad type `kannaDa ` → ಕನ್ನಡ. `agni'` → ಅಗ್ನಿ॑. `kaM'` → ಕಂ॑. `` c`H `` → ಚ್ಃ.
-   Tray menu → Vedic mode off: `ka'` now types ಕ' (a plain apostrophe).
-   German keyboard: Shift + `´` then `H` after `c` gives ಚ್ಃ, and AltGr + `+` (`~`) works in `~g`.
-3. **Loop guard:** type quickly for ten seconds. Output must not repeat or run on,
-   and CPU in Task Manager stays near 0 %. (Own `SendInput` events carry
-   `LLKHF_INJECTED` and are skipped by `hook/filter.rs`.)
-4. Backspace after `ka'` removes only the accent; continuing to type extends the word.
-5. While OFF, typing is unchanged. `Ctrl+C/V` and other shortcuts always pass through.
-6. If text appears garbled or doubled in some app, retry with
-   `kannada_ime.exe --inject clipboard`.
-
-### Linux (beta)
-
-```bash
-sudo apt install build-essential pkg-config libgtk-3-dev libayatana-appindicator3-dev \
-  libxdo-dev libxkbcommon-dev libx11-dev libxtst-dev libevdev-dev libdbus-1-dev libudev-dev
-cargo build --release          # -> target/release/kannada_ime
-sudo usermod -aG input $USER   # keyboard grab needs /dev/input + /dev/uinput; re-login
-strip target/release/kannada_ime   # already stripped by the release profile
-```
-
-**The Linux agent is for US keyboard layouts only.** It reads the physical key position, so on a German
-keyboard Y and Z are swapped and AltGr counts as Alt. The planned IBus input method will fix this.
-
-Linux notes: capture works on X11 and Wayland (evdev), but synthetic Unicode
-injection depends on the compositor; if text does not appear, try
-`--inject clipboard`. Tray needs an AppIndicator-capable shell (GNOME needs the
-AppIndicator extension). Long-term, an IBus/Fcitx5 engine is the better Linux design.
-
-### Run
-
-```
-kannada_ime [--off] [--inject unicode|clipboard]
-kannada_ime --translit "namaste"        # test the mapping without any hooks
-kannada_ime --version
-```
-
-Autostart on Windows: put a shortcut in `shell:startup`.
-
-Settings (Vedic mode, update check) are saved in `%APPDATA%\KannadaIME\settings.txt` on Windows and
-`~/.config/kannada-ime/settings.txt` on Linux. The update check asks GitHub once at startup (through the
-system `curl`) and only shows a notice; it never downloads or installs anything. Turn it off in the tray menu.
-
-## Size / memory expectations (estimates, not measurements)
-
-Release binary is likely in the low single-digit MB (opt-level z, LTO, strip).
-The hot path (key → render → diff → inject) is microseconds. The <5 MB RAM
-target is realistic for the engine itself, but the tray + toast stacks
-(WinRT / GTK) usually push total resident memory above that — measure with Task
-Manager / `ps` and trim with `--off` + fewer features if it matters.
+**Privacy:** No data is collected. Typing stays on your computer. The only network call is the optional update check to GitHub, which you can switch off in the tray.
 
 ## Limitations
 
-* Elevated (admin) windows ignore a non-elevated hook (UIPI) — run elevated.
-* `Ctrl+Shift+K` is swallowed system-wide (it is a Firefox DevTools shortcut).
-* Right after a mapped letter, `'` is an accent, so English contractions need the engine OFF.
-* **Keyboard layouts (Windows):** the grave and circumflex dead keys (German Shift + `´` and `^`) work as
-  the break and Udatta keys without Space, and AltGr characters such as `~` are typed normally. Other dead
-  keys (acute, diaeresis) keep their usual behaviour. `'`, `"` and `_` are reachable with Shift on German
-  and US layouts.
-* Not implemented: lowercase `m` as anusvara (conflicts with ಮ, see the typing scheme above).
-* Accent glyphs need a font carrying U+0951, U+0952, U+1CDA.
-* Toast sender may read "Windows PowerShell" until an AppUserModelID is registered by an installer.
+* Windows asks for an unsigned-program confirmation (SmartScreen) on first run.
+* Programs running as administrator ignore a normal program's keyboard hook. Run `kannada_ime` as administrator for those windows.
+* `Ctrl+Shift+K` is taken system-wide while the program runs (it is also a Firefox shortcut).
+* Right after a mapped letter, `'` is an accent. For English contractions, switch Vedic mode or typing off.
+* On a German keyboard only the grave and circumflex dead keys are handled; other dead keys keep their usual behaviour.
+* Accents show correctly only in a font that carries them. Use Arkavathi, or any font with U+0951, U+0952 and U+1CDA. Notepad does not position them; use a browser, Word, LibreOffice or VS Code.
+* Toast pop-ups may still say "Windows PowerShell" instead of "Kannada IME" on some systems.
+* Linux is a preview: tested on Linux Mint 22 XFCE (X11, US keyboard) with LibreOffice Writer only. `g`M` gives ಗ್ಂ there.
+* There is no macOS or mobile app. On an iPhone the web typer works, but Safari may show the Devanagari preview as boxes.
 
-## Licence
+## Possible future features
 
-* **Program code:** Copyright (c) 2026 Shashank Koundinya Banavathi Rajashekara, MIT OR Apache-2.0 (your choice) — see `LICENSE-MIT`, `LICENSE-APACHE`.
-* **Font (`fonts/Kaveri.ttf`):** SIL Open Font License 1.1 — see `fonts/OFL.txt`. It is a modified
-  copy of Goda (Parankusacar Institute of Vedic Studies, derived from Sampige by IISc) and is renamed
-  because "Goda" is a Reserved Font Name.
+* Devanagari typing mode
+* A "Start with Windows" checkbox in the tray menu
+* A Windows installer (installs the font, adds a Start Menu entry, uninstalls cleanly, and fixes the toast name)
+* Code signing, once the project is eligible
+* An offline web typer you can add to your home screen
+* A native Linux IBus engine
 
-## Credits
+## Status
 
-* Goda font: Parankusacar Institute of Vedic Studies (derived from Sampige, Indian Institute of Science).
-* Typing scheme: inspired by Baraha-style phonetic input.
-* Code, tests, web typer and documentation: written with Claude (Anthropic), directed and tested by the project author.
+| Part | State |
+|---|---|
+| Typing engine (`mapping.rs`, `engine.rs`, `guide.rs`, `state.rs`, `settings.rs`, `update.rs`) | Automated tests pass; output is NFC/NFD-stable on thousands of random inputs |
+| Windows hook, tray, injector | Used by hand on one Windows PC. CI builds them on Windows and Linux |
+| Linux input method | Preview. 30,000-input parity test against the Rust engine; hand-tested on one machine |
+| Vedic conventions | Check output against your own printed edition before you rely on it for recitation or publishing, and open an issue if a sign or accent is wrong |
+
+## How this was made
+
+This project was vibe coded extensively with [Claude](https://claude.ai) (Anthropic). Shashank Koundinya Banavathi Rajashekara
+set the goals, chose the typing scheme and the Vedic conventions, tested every version and decided what to keep. Claude wrote most
+of the code, tests, web typer, font script and documentation. It has not had a professional code or security review. The program
+reads all keystrokes while it is switched on, so read `src/hook/` if that matters to you.
+
+## Licence and credits
+
+* **Code:** MIT OR Apache-2.0, your choice (`LICENSE-MIT`, `LICENSE-APACHE`).
+* **Font (`fonts/Arkavathi.ttf`):** SIL Open Font License 1.1 (`fonts/OFL.txt`). A modified copy of Goda (Parankusacar Institute of Vedic Studies, derived from Sampige by the Indian Institute of Science). The credit for the letterforms belongs to those authors.
+* Typing scheme inspired by Baraha. Code, tests and docs written with Claude, directed and tested by the project author.

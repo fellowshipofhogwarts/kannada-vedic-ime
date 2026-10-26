@@ -16,14 +16,16 @@ pub enum ToggleSource {
 pub struct AppState {
     active: AtomicBool,
     vedic: AtomicBool,
+    digits: AtomicBool,
     epoch: AtomicU32,
 }
 
 impl AppState {
-    pub fn new(active: bool, vedic: bool) -> Arc<Self> {
+    pub fn new(active: bool, vedic: bool, digits: bool) -> Arc<Self> {
         Arc::new(Self {
             active: AtomicBool::new(active),
             vedic: AtomicBool::new(vedic),
+            digits: AtomicBool::new(digits),
             epoch: AtomicU32::new(0),
         })
     }
@@ -42,6 +44,16 @@ impl AppState {
     /// The hook thread notices the change on its next key and flushes its word.
     pub fn set_vedic(&self, on: bool) {
         self.vedic.store(on, Ordering::Relaxed);
+    }
+
+    /// Kannada digits (೧೨೩) instead of English digits.
+    #[inline]
+    pub fn is_digits(&self) -> bool {
+        self.digits.load(Ordering::Relaxed)
+    }
+
+    pub fn set_digits(&self, on: bool) {
+        self.digits.store(on, Ordering::Relaxed);
     }
 
     #[inline]
@@ -63,7 +75,7 @@ mod tests {
 
     #[test]
     fn toggle_flips_and_bumps_epoch() {
-        let s = AppState::new(true, true);
+        let s = AppState::new(true, true, true);
         assert!(s.is_active());
         let e0 = s.epoch();
         assert!(!s.toggle());
@@ -73,14 +85,22 @@ mod tests {
     }
 
     #[test]
+    fn digits_flag_is_independent() {
+        let s = AppState::new(true, true, true);
+        assert!(s.is_digits());
+        s.set_digits(false);
+        assert!(!s.is_digits() && s.is_vedic() && s.is_active());
+    }
+
+    #[test]
     fn vedic_flag_is_independent_of_on_off() {
-        let s = AppState::new(true, true);
+        let s = AppState::new(true, true, true);
         assert!(s.is_vedic());
         s.set_vedic(false);
         assert!(!s.is_vedic());
         assert!(s.is_active());
         s.toggle();
         assert!(!s.is_vedic(), "turning typing off must not change Vedic mode");
-        assert!(!AppState::new(false, false).is_vedic());
+        assert!(!AppState::new(false, false, true).is_vedic());
     }
 }

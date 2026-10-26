@@ -6,7 +6,7 @@
 //! * Linux:   `~/.config/kannada-ime/settings.txt` (or `$XDG_CONFIG_HOME`)
 //!
 //! Reading and writing never fail loudly: a missing or unreadable file simply
-//! means the defaults (both on).
+//! means the defaults (all on).
 
 use std::path::PathBuf;
 
@@ -14,6 +14,8 @@ use std::path::PathBuf;
 pub struct Settings {
     /// Vedic accent keys and the agama anusvara are active.
     pub vedic: bool,
+    /// The keys 0-9 (and the numpad) type Kannada digits ೦-೯; off = English digits.
+    pub kannada_digits: bool,
     /// Ask GitHub once at startup whether a newer release exists.
     pub update_check: bool,
 }
@@ -22,6 +24,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             vedic: true,
+            kannada_digits: true,
             update_check: true,
         }
     }
@@ -44,6 +47,7 @@ impl Settings {
                 );
                 match key.trim() {
                     "vedic" => s.vedic = on,
+                    "kannada_digits" => s.kannada_digits = on,
                     "update_check" => s.update_check = on,
                     _ => {}
                 }
@@ -54,8 +58,8 @@ impl Settings {
 
     pub fn to_text(&self) -> String {
         format!(
-            "# Kannada IME settings (1 = on, 0 = off)\nvedic={}\nupdate_check={}\n",
-            self.vedic as u8, self.update_check as u8
+            "# Kannada IME settings (1 = on, 0 = off)\nvedic={}\nkannada_digits={}\nupdate_check={}\n",
+            self.vedic as u8, self.kannada_digits as u8, self.update_check as u8
         )
     }
 
@@ -96,18 +100,21 @@ mod tests {
     #[test]
     fn defaults_are_both_on() {
         let s = Settings::default();
-        assert!(s.vedic && s.update_check);
+        assert!(s.vedic && s.kannada_digits && s.update_check);
         assert_eq!(Settings::parse(""), s);
     }
 
     #[test]
     fn round_trip() {
         for (v, u) in [(true, true), (true, false), (false, true), (false, false)] {
-            let s = Settings {
-                vedic: v,
-                update_check: u,
-            };
-            assert_eq!(Settings::parse(&s.to_text()), s);
+            for d in [true, false] {
+                let s = Settings {
+                    vedic: v,
+                    kannada_digits: d,
+                    update_check: u,
+                };
+                assert_eq!(Settings::parse(&s.to_text()), s);
+            }
         }
     }
 
@@ -116,8 +123,10 @@ mod tests {
         let s = Settings::parse("# comment\n\n  vedic = 0 \nunknown=1\nupdate_check=YES\n");
         assert!(!s.vedic);
         assert!(s.update_check);
-        // A missing key keeps its default.
+        // A missing key keeps its default (an old 0.4 file has no digits key).
         assert!(Settings::parse("update_check=0").vedic);
+        assert!(Settings::parse("vedic=0").kannada_digits);
+        assert!(!Settings::parse("kannada_digits=0").kannada_digits);
         // Garbage values count as off, garbage lines are skipped.
         assert!(!Settings::parse("vedic=maybe").vedic);
         assert_eq!(Settings::parse("no equals sign here"), Settings::default());

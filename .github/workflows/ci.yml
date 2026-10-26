@@ -34,3 +34,13 @@ jobs:
         with:
           name: Cargo.lock
           path: Cargo.lock
+
+  linux-ime:
+    # The Linux input method (Python): its own tests, plus a check that the .deb builds.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 linux/tests/test_engine.py
+      - name: Tables are generated from mapping.rs
+        run: python3 linux/tools/gen_tables.py src/mapping.rs | diff - linux/kvtables.py
+      - run: linux/build_deb.sh

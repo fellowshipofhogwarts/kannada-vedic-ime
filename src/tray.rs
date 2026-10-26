@@ -32,7 +32,7 @@ static ICON_OFF: &[u8] = include_bytes!("../assets/icons/off_64.rgba");
 enum UserEvent {
     Menu(MenuEvent),
     Toggled(ToggleSource),
-    /// The keyboard hook could not start (reason for the toast).
+    /// The keyboard or mouse hook could not start (reason for the toast).
     HookFailed(String),
     /// Result of a GitHub check; `manual` = the user clicked the menu item.
     UpdateChecked { latest: Option<String>, manual: bool },
@@ -42,12 +42,14 @@ struct Tray {
     icon: TrayIcon,
     check: CheckMenuItem,
     vedic: CheckMenuItem,
+    digits: CheckMenuItem,
     update_item: MenuItem,
     auto_check: CheckMenuItem,
     on: Icon,
     off: Icon,
     toggle_id: MenuId,
     vedic_id: MenuId,
+    digits_id: MenuId,
     guide_id: MenuId,
     update_id: MenuId,
     auto_id: MenuId,
@@ -75,6 +77,12 @@ impl Tray {
 
         let check = CheckMenuItem::new("Kannada typing (Ctrl+Shift+K)", true, active, None);
         let vedic = CheckMenuItem::new("Vedic mode (accent keys, ꣳ)", true, settings.vedic, None);
+        let digits = CheckMenuItem::new(
+            "Kannada digits (೧ ೨ ೩); untick for 1 2 3",
+            true,
+            settings.kannada_digits,
+            None,
+        );
         let guide_item = MenuItem::new("Phonetic && Vedic quick reference", true, None);
         let update_item = MenuItem::new(check_label(), true, None);
         let auto_check = CheckMenuItem::new(
@@ -84,11 +92,11 @@ impl Tray {
             None,
         );
         let quit = MenuItem::new("Exit", true, None);
-
         let menu = Menu::new();
         menu.append_items(&[
             &check,
             &vedic,
+            &digits,
             &guide_item,
             &PredefinedMenuItem::separator(),
             &update_item,
@@ -107,12 +115,14 @@ impl Tray {
             icon,
             toggle_id: check.id().clone(),
             vedic_id: vedic.id().clone(),
+            digits_id: digits.id().clone(),
             guide_id: guide_item.id().clone(),
             update_id: update_item.id().clone(),
             auto_id: auto_check.id().clone(),
             quit_id: quit.id().clone(),
             check,
             vedic,
+            digits,
             update_item,
             auto_check,
             on,
@@ -133,18 +143,45 @@ impl Tray {
     }
 }
 
+/// Windows shows a toast under the name registered for its AppUserModelID.
+/// Without one, toasts borrow "Windows PowerShell". We register our own name
+/// once per user (a tiny HKCU registry entry, no admin needed). If that fails
+/// for any reason we keep the old behaviour, so a toast is never lost.
+#[cfg(windows)]
+const TOAST_ID: &str = "KannadaVedicIME.Typer";
+
+#[cfg(windows)]
+fn toast_identity_ready() -> bool {
+    use std::os::windows::process::CommandExt;
+    use std::sync::OnceLock;
+    static READY: OnceLock<bool> = OnceLock::new();
+    *READY.get_or_init(|| {
+        let key = format!("HKCU\\Software\\Classes\\AppUserModelId\\{TOAST_ID}");
+        std::process::Command::new("reg")
+            .args(["add", &key, "/v", "DisplayName", "/t", "REG_SZ", "/d", "Kannada IME", "/f"])
+            .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    })
+}
+
 /// OS-native toast, off the UI thread (notification back-ends can block on D-Bus
 /// or WinRT for a moment).
 fn notify(title: &str, body: &str) {
     let title = title.to_string();
     let body = body.to_string();
     std::thread::spawn(move || {
-        let _ = notify_rust::Notification::new()
-            .appname("Kannada IME")
+        let mut n = notify_rust::Notification::new();
+        n.appname("Kannada IME")
             .summary(&title)
             .body(&body)
-            .timeout(notify_rust::Timeout::Milliseconds(4000))
-            .show();
+            .timeout(notify_rust::Timeout::Milliseconds(4000));
+        #[cfg(windows)]
+        if toast_identity_ready() {
+            n.app_id(TOAST_ID);
+        }
+        let _ = n.show();
     });
 }
 
@@ -200,7 +237,7 @@ fn start_update_check(proxy: &tao::event_loop::EventLoopProxy<UserEvent>, manual
 /// Build everything and run the UI loop. Never returns.
 pub fn run(cfg: Config) -> ! {
     let mut settings = Settings::load();
-    let state = AppState::new(!cfg.start_off, settings.vedic);
+    let state = AppState::new(!cfg.start_off, settings.vedic, settings.kannada_digits);
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
@@ -235,7 +272,6 @@ pub fn run(cfg: Config) -> ! {
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
-
         match event {
             // Linux/macOS require the tray to be created once the loop runs.
             Event::NewEvents(StartCause::Init) => match Tray::new(state.is_active(), settings) {
@@ -245,7 +281,6 @@ pub fn run(cfg: Config) -> ! {
                     *control_flow = ControlFlow::Exit;
                 }
             },
-
             Event::UserEvent(UserEvent::Toggled(source)) => {
                 if let Some(t) = tray.as_mut() {
                     let active = state.is_active();
@@ -253,11 +288,11 @@ pub fn run(cfg: Config) -> ! {
                     toast(active, source);
                 }
             }
-
             Event::UserEvent(UserEvent::HookFailed(msg)) => {
-                notify("Kannada IME cannot read the keyboard", &msg);
+                // 0.5.1: also used for a failed mouse hook, so the title names
+                // the problem generally; the message says what is affected.
+                notify("Kannada IME: input problem", &msg);
             }
-
             Event::UserEvent(UserEvent::UpdateChecked { latest, manual }) => {
                 let Some(t) = tray.as_mut() else { return };
                 match latest {
@@ -287,7 +322,6 @@ pub fn run(cfg: Config) -> ! {
                     _ => {} // automatic check: say nothing unless there is news
                 }
             }
-
             Event::UserEvent(UserEvent::Menu(ev)) => {
                 let Some(t) = tray.as_mut() else { return };
                 if ev.id == t.toggle_id {
@@ -308,6 +342,19 @@ pub fn run(cfg: Config) -> ! {
                             "Accent keys type normally; no ꣳ."
                         },
                     );
+                } else if ev.id == t.digits_id {
+                    let on = t.digits.is_checked();
+                    state.set_digits(on);
+                    settings.kannada_digits = on;
+                    settings.save();
+                    notify(
+                        if on { "Kannada digits" } else { "English digits" },
+                        if on {
+                            "The number keys type ೧ ೨ ೩ (numpad too)."
+                        } else {
+                            "The number keys type 1 2 3 as usual."
+                        },
+                    );
                 } else if ev.id == t.guide_id {
                     open_guide();
                 } else if ev.id == t.update_id {
@@ -324,7 +371,6 @@ pub fn run(cfg: Config) -> ! {
                     *control_flow = ControlFlow::Exit;
                 }
             }
-
             _ => {}
         }
     })

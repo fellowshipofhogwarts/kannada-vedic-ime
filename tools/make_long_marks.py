@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Make a tuned copy of the Goda font for Vedic reading. Needs: pip install fonttools
 
-    python3 make_long_marks.py Goda.ttf Kaveri.ttf [bar_factor] [anudatta_raise]
+    python3 make_long_marks.py Goda.ttf Arkavathi.ttf [bar_factor] [anudatta_raise]
 
 1. Taller Udatta / Svarita bars. The vertical bars (single and double) are scaled
    by `bar_factor` (default 1.4). Their bottom edge stays put, so only the top grows.
@@ -30,9 +30,9 @@ from fontTools.ttLib.tables import otTables as ot
 
 BAR_GLYPHS = ("dn_svarita", "dn_dSvarita", "kn_svarita", "kn_dSvarita")
 ANUDATTA = ("dn_anudatta", "kn_anudatta")
-VERSION = "1.2"
-FAMILY = "Kaveri"
-PS_NAME = "Kaveri-Regular"
+VERSION = "1.3"
+FAMILY = "Arkavathi"
+PS_NAME = "Arkavathi-Regular"
 SHALLOW = -150  # a glyph whose lowest point is above this does not "hang"
 
 
@@ -151,7 +151,7 @@ def rename(f, note):
         if rec.nameID == 1:
             rec.string = FAMILY
         elif rec.nameID == 3:
-            rec.string = "Kaveri-%s;derived-from-Goda-1.0.5" % VERSION
+            rec.string = "Arkavathi-%s;derived-from-Goda-1.0.5" % VERSION
         elif rec.nameID in (16,):
             rec.string = FAMILY
         elif rec.nameID == 4:

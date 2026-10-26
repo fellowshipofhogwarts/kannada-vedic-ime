@@ -24,7 +24,7 @@ jobs:
           $name = "kannada-vedic-ime-$env:TAG-windows"
           New-Item -ItemType Directory $name | Out-Null
           Copy-Item target/release/kannada_ime.exe $name/
-          Copy-Item fonts/Kaveri.ttf, fonts/OFL.txt $name/
+          Copy-Item fonts/Arkavathi.ttf, fonts/OFL.txt $name/
           Copy-Item packaging/QUICKSTART.txt, LICENSE-MIT, LICENSE-APACHE, CHANGELOG.md $name/
           Compress-Archive -Path $name -DestinationPath "$name.zip"
           echo "ZIP=$name.zip" >> $env:GITHUB_ENV
@@ -34,3 +34,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
         run: gh release upload "$env:TAG" $env:ZIP --clobber
+
+  linux-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the .deb
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          linux/build_deb.sh "${TAG#v}"
+          echo "DEB=$(ls dist/*.deb)" >> "$GITHUB_ENV"
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" "$DEB" --clobber

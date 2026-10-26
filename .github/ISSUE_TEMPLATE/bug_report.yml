@@ -1,0 +1,39 @@
+name: Bug report
+description: Something typed wrongly, a mark looks wrong, or the app misbehaves
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. On the web typer, the **Copy bug report** button at the bottom copies your browser and settings; paste it below. No personal data is collected.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen?
+      options: [Windows app, Linux (IBus), Web typer, Font (Arkavathi), Other]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Tray menu "Check for updates (this is v...)" or the footer of the web page
+      placeholder: "0.5.0"
+  - type: textarea
+    id: typed
+    attributes:
+      label: What did you type?
+      placeholder: "agni'mILE'"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, and what happened?
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Your setup
+      description: Windows or Linux version, keyboard layout, the program you typed in (Word, LibreOffice, browser...), the font, and the bug report text from the web page if you have it.

@@ -13,7 +13,7 @@ You need: a free GitHub account, the unzipped project folder, and (optional but 
 ## B. Create the repository
 
 1. Sign in at github.com. Click **+** (top right) → **New repository**.
-2. Name: `kannada-vedic-ime`. Description: *Phonetic Kannada typing with Vedic accents (Windows tray app, web typer, Kaveri font).*
+2. Name: `kannada-vedic-ime`. Description: *Phonetic Kannada typing with Vedic accents (Windows tray app, web typer, Arkavathi font).*
 3. Choose **Public**. Leave "Add a README / .gitignore / licence" all **off** (the project already has them).
 4. Click **Create repository**.
 
@@ -45,23 +45,24 @@ A green tick means it passed. If it is red, click it and send me the error text.
 3. Title `0.3.0`; paste that version's section from `CHANGELOG.md`; click **Publish release**.
 4. The **Release** workflow (Actions tab) builds `kannada_ime.exe` and attaches
    `kannada-vedic-ime-v0.3.0-windows.zip` to the release after about five minutes.
-   That zip has the program, the Kaveri font, a one-page quick start and the licences.
+   That zip has the program, the Arkavathi font, a one-page quick start and the licences.
 5. Share the link of the release page. Users unzip, install the font, double-click the exe.
 
 ## Later releases
 
 Change the version in `Cargo.toml`, add a section to `CHANGELOG.md`, commit and push in GitHub Desktop,
-then repeat step F with the next tag (`v0.4.0`, …).
+then repeat step F with the next tag (`v0.6.0`, …).
 
-### Releasing 0.4.0 (what to do with the new files)
+### Releasing 0.5.0 (what to do with the new files)
 
-1. Close GitHub Desktop's repository view if it is open, then copy the new project files over your
-   repository folder (replace when asked). Do not delete `.git`.
-2. GitHub Desktop → **Changes** tab lists the changed files. Summary `Release 0.4.0` → **Commit to main** → **Push origin**.
-3. Actions tab: wait for the green tick on "CI". If it is red, send me the error text.
-4. Pages updates by itself after the push (about a minute): the web typer now has the converters.
-5. Releases → **Draft a new release** → tag `v0.4.0` → title `0.4.0` → paste the 0.4.0 section of
-   `CHANGELOG.md` → **Publish release**. The zip appears on the release page after about five minutes.
+1. Copy the new project files over your repository folder (replace when asked). Do not delete `.git`.
+   Delete the two old files `fonts/Kaveri.ttf` and `docs/Kaveri.pdf` (they are replaced by `Arkavathi.ttf` and `Arkavathi.pdf`).
+2. GitHub Desktop, **Changes** tab: check the list, summary `Release 0.5.0`, **Commit to main**, **Push origin**.
+3. Actions tab: wait for the green tick on "CI" (it now has a Linux job too). If it is red, send me the error text.
+4. Pages updates by itself after the push (about a minute).
+5. Releases, **Draft a new release**, tag `v0.5.0`, title `0.5.0`, paste the 0.5.0 section of `CHANGELOG.md`,
+   **Publish release**. The Windows zip and the Linux `.deb` appear on the release page after about five minutes.
+6. Search Console: open the Pages address, press **Verify**, then **Request indexing**.
 
 ### Save Cargo.lock (once, after the first green CI run)
 
