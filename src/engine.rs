@@ -22,6 +22,11 @@
 //! a phonetic key: space, Enter, arrows, mouse click, shortcut, focus change,
 //! app toggle… The engine therefore never backspaces over text it did not type.
 //!
+//! A word longer than [`MAX_BUFFER`] keys is not broken (0.5.3): the oldest,
+//! finished syllables are committed and the rest of the word stays live, with
+//! exactly the same output as if the whole word had been kept (see
+//! [`Engine::make_room`]).
+//!
 //! Typing an accent (`'` `^` `_` `\` `"` `^^`) or anusvara/visarga (`M` `H`)
 //! does **not** end the word. The key is appended to the buffer like any other,
 //! so the word stays live: Backspace removes just that mark, and further letters
@@ -64,8 +69,10 @@
 
 use crate::mapping::{self, Tok, VIRAMA};
 
-/// Keystrokes kept in the live buffer. Typing past this starts a fresh buffer
-/// (earlier text is simply committed).
+/// Keystrokes kept in the live buffer. When a word grows past this, its oldest
+/// finished syllables are committed and dropped from the buffer; the word
+/// itself continues unchanged (0.5.3). Backspace can undo at most this many
+/// keys of a word.
 pub const MAX_BUFFER: usize = 48;
 
 /// What the injector has to do: erase `backspaces` code points, then type `text`.
@@ -103,7 +110,10 @@ pub struct Rendered {
 /// * consonant  → cluster + virama (`pending` = virama may still be replaced)
 /// * vowel      → after a pending consonant: replace virama by the matra (or drop
 ///   it for inherent `a`); otherwise the independent vowel
-/// * M / H      → anusvara / visarga. Right after a bare consonant the virama is
+/// * M / H / :M → anusvara / visarga / candrabindu. With nothing to attach to
+///   (start of a word, after ಽ ೱ ೲ or a literal) the keys stay literal text,
+///   like the accent keys (0.5.3; no lone mark on a dotted circle). Right after
+///   a bare consonant the virama is
 ///   dropped (full letter: `kM` = ಕಂ). With a break key in between the virama
 ///   stays (half letter: `` k`M `` = ಕ್ಂ). Otherwise the sign is inserted
 ///   *before* any Vedic marks already present (canonical order)
@@ -123,10 +133,39 @@ pub fn render(roman: &str) -> Rendered {
 /// [`render`] with the Vedic switch: when `vedic` is false the accent keys are
 /// ordinary characters and `` g`M `` gives ಗ್ಂ instead of U+A8F3.
 pub fn render_with(roman: &str, vedic: bool) -> Rendered {
+    render_core(roman, vedic, false, None)
+}
+
+/// A point inside a roman buffer where it can be cut in two without changing
+/// the output: rendering the part after it (starting with `attachable`) gives
+/// exactly the rest of the full output. See [`Engine::make_room`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SafeCut {
+    /// Byte offset into the roman buffer.
+    roman: usize,
+    /// Byte offset into the rendered text.
+    text: usize,
+    /// Whether the next token may attach to what came before.
+    attachable: bool,
+}
+
+/// The renderer. `start_attachable` continues a word whose beginning was
+/// already committed; `cuts`, when given, collects every [`SafeCut`].
+///
+/// A cut is safe right after a token when nothing that follows can reach back
+/// into the text before it: no virama waiting to be replaced (`pending`), no
+/// break key waiting for the next token, and the text does not end with Vedic
+/// marks (a later sign or accent would be sorted in among them).
+fn render_core(
+    roman: &str,
+    vedic: bool,
+    start_attachable: bool,
+    mut cuts: Option<&mut Vec<SafeCut>>,
+) -> Rendered {
     let table = mapping::table();
     let mut out = String::with_capacity(roman.len() * 3);
     let mut pending = false; // out currently ends with a virama we appended
-    let mut attachable = false;
+    let mut attachable = start_attachable;
     let mut after_break = false;
 
     let mut i = 0;
@@ -154,6 +193,7 @@ pub fn render_with(roman: &str, vedic: bool) -> Rendered {
             attachable = false;
             after_break = false;
             i += ch.len_utf8();
+            note_cut(&mut cuts, i, &out, pending, after_break, attachable);
             continue;
         };
 
@@ -192,10 +232,18 @@ pub fn render_with(roman: &str, vedic: bool) -> Rendered {
                 } else if pending {
                     out.pop(); // the virama: full consonant + sign
                     out.push(s);
-                } else {
+                } else if attachable {
                     // Canonical order: sign goes before any Vedic marks typed earlier.
                     let at = trailing_marks_start(&out);
                     out.insert(at, s);
+                } else {
+                    // Nothing to sit on (start of a word, after ಽ ೱ ೲ or a
+                    // literal): the keys stay literal text, like the accent keys.
+                    out.push_str(&roman[i..i + len]);
+                    after_break = false;
+                    i += len;
+                    note_cut(&mut cuts, i, &out, pending, after_break, attachable);
+                    continue;
                 }
                 pending = false;
                 attachable = true;
@@ -238,11 +286,33 @@ pub fn render_with(roman: &str, vedic: bool) -> Rendered {
             Tok::Break => after_break = true,
         }
         i += len;
+        note_cut(&mut cuts, i, &out, pending, after_break, attachable);
     }
 
     Rendered {
         text: out,
         attachable,
+    }
+}
+
+/// Record a [`SafeCut`] after the token that ended at roman byte `i`, if safe.
+fn note_cut(
+    cuts: &mut Option<&mut Vec<SafeCut>>,
+    i: usize,
+    out: &str,
+    pending: bool,
+    after_break: bool,
+    attachable: bool,
+) {
+    if let Some(cuts) = cuts.as_deref_mut() {
+        let ends_with_mark = out.chars().next_back().is_some_and(mapping::is_vedic_mark);
+        if !pending && !after_break && !ends_with_mark {
+            cuts.push(SafeCut {
+                roman: i,
+                text: out.len(),
+                attachable,
+            });
+        }
     }
 }
 
@@ -307,6 +377,9 @@ pub fn diff(old: &str, new: &str) -> Edit {
 pub struct Engine {
     buf: String,
     shown: String,
+    /// The start of the current word was committed by [`Engine::make_room`]
+    /// and the next token may attach to it (e.g. an accent after ಕ).
+    start_attachable: bool,
     /// Vedic mode: accent keys and the agama anusvara are active.
     vedic: bool,
     /// Kannada digits: the keys 0-9 type ೦-೯ (default). Off = English digits.
@@ -318,6 +391,7 @@ impl Default for Engine {
         Self {
             buf: String::new(),
             shown: String::new(),
+            start_attachable: false,
             vedic: true,
             digits: true,
         }
@@ -333,6 +407,38 @@ impl Engine {
     pub fn reset(&mut self) {
         self.buf.clear();
         self.shown.clear();
+        self.start_attachable = false;
+    }
+
+    fn render(&self) -> Rendered {
+        render_core(&self.buf, self.vedic, self.start_attachable, None)
+    }
+
+    /// Make room for one more key in a full buffer without breaking the word
+    /// (0.5.3; before, the word simply restarted, so the next vowel came out as
+    /// an independent letter). The longest finished part of the word is
+    /// committed: dropped from `buf` and from `shown`, while what stays renders
+    /// exactly as before. Returns false if the buffer has no safe cut at all
+    /// (e.g. 48 bare consonants); then the caller falls back to a reset.
+    fn make_room(&mut self) -> bool {
+        if self.buf.len() < MAX_BUFFER {
+            return true;
+        }
+        let mut cuts = Vec::new();
+        let r = render_core(&self.buf, self.vedic, self.start_attachable, Some(&mut cuts));
+        debug_assert_eq!(r.text, self.shown);
+        // A cut is only final if the token before it was matched with its full
+        // look-ahead (`R` may still become `RRi`, `a` may still become `aa`).
+        let stable = self.buf.len() + 1 - mapping::MAX_TOKEN_LEN;
+        match cuts.iter().rev().find(|c| c.roman <= stable) {
+            Some(cut) if cut.text <= self.shown.len() => {
+                self.buf.drain(..cut.roman);
+                self.shown.drain(..cut.text);
+                self.start_attachable = cut.attachable;
+                true
+            }
+            _ => false,
+        }
     }
 
     /// Switch Vedic mode. A change ends the current word.
@@ -358,6 +464,12 @@ impl Engine {
 
     /// Feed one typed character (already resolved from the key + layout).
     pub fn on_char(&mut self, c: char) -> Outcome {
+        if c == '`' && self.buf.is_empty() && !self.start_attachable {
+            // At the start of a word the break key has nothing to break: type a
+            // real backtick (0.5.3). Inside a word it stays the break key.
+            self.reset();
+            return Outcome::Pass;
+        }
         if c == '`' && self.buf.ends_with('`') {
             // A repeated break key changes nothing: swallow it silently.
             return Outcome::Consumed(Edit::default());
@@ -373,16 +485,16 @@ impl Engine {
             }
         }
         if mapping::is_phonetic_key(c) {
-            if self.buf.len() >= MAX_BUFFER {
+            if !self.make_room() {
                 self.reset();
             }
             self.buf.push(c);
             return Outcome::Consumed(self.sync());
         }
-        if self.vedic && mapping::is_accent_key(c) && render_with(&self.buf, true).attachable {
+        if self.vedic && mapping::is_accent_key(c) && self.render().attachable {
             // `'`/`^`/`_`/`"`… only act as accents right after a Kannada unit;
             // anywhere else they are ordinary punctuation and pass through.
-            if self.buf.len() >= MAX_BUFFER {
+            if !self.make_room() {
                 self.reset();
                 return Outcome::Pass;
             }
@@ -397,6 +509,7 @@ impl Engine {
     /// buffer the key goes through untouched.
     pub fn on_backspace(&mut self) -> Outcome {
         if self.buf.is_empty() {
+            self.reset(); // a native backspace: the committed start may be gone
             return Outcome::Pass;
         }
         self.buf.pop();
@@ -404,7 +517,7 @@ impl Engine {
     }
 
     fn sync(&mut self) -> Edit {
-        let r = render_with(&self.buf, self.vedic);
+        let r = self.render();
         let edit = diff(&self.shown, &r.text);
         self.shown = r.text;
         edit
@@ -588,7 +701,7 @@ mod tests {
         assert_eq!(typed(":L"), "ೡ");
         assert_eq!(typed("k:l"), "ಕೢ");
         assert_eq!(typed("k:L"), "ಕೣ");
-        assert_eq!(typed(":M"), "ಁ");
+        assert_eq!(typed(":M"), ":M"); // nothing to sit on: literal (0.5.3)
         assert_eq!(typed("ka:M"), "ಕಁ");
         // Nukta: right after a consonant, before the virama / vowel sign.
         assert_eq!(typed("jQa"), "ಜ಼");
@@ -885,14 +998,22 @@ mod tests {
 
     #[test]
     fn incremental_equals_batch_for_random_input() {
-        // Tiny LCG; no external crates.
-        let alphabet: Vec<char> = "kgcjTDNtdnpbmyrlvwshLxSfaAiIuUeEoO~MH:KGJPB`'_^\"\\"
+        // Tiny LCG; no external crates. Inputs go up to 200 keys, so long words
+        // cross MAX_BUFFER many times. Keys the engine passes through (accent
+        // keys with nothing to attach to, a backtick at the start of a word, Q
+        // after Latin text …) are checked too (0.5.3): the expected screen is
+        // the batch rendering of each run of consumed keys, joined by the
+        // passed keys, exactly as the engine resets on them.
+        let alphabet: Vec<char> = "kgcjTDNtdnpbmyrlvwshLxSfaAiIuUeEoO~MHQZ:KGJPB`'_^\"\\q"
             .chars()
             .collect();
         let mut seed: u64 = 0x9E3779B97F4A7C15;
         for _ in 0..3000 {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            let n = 1 + (seed >> 33) as usize % 200;
             let mut s = String::new();
-            let n = 1 + (seed % 30) as usize;
             for _ in 0..n {
                 seed = seed
                     .wrapping_mul(6364136223846793005)
@@ -900,15 +1021,19 @@ mod tests {
                 s.push(alphabet[(seed >> 33) as usize % alphabet.len()]);
             }
             let mut sc = Screen::default();
-            let mut engine_resets = false;
+            let mut expected = String::new();
+            let mut run = String::new();
             for c in s.chars() {
                 if let Outcome::Pass = sc.key(c) {
-                    engine_resets = true;
+                    expected.push_str(&transliterate(&run));
+                    expected.push(c);
+                    run.clear();
+                } else {
+                    run.push(c);
                 }
             }
-            if !engine_resets {
-                assert_eq!(sc.s(), transliterate(&s), "input {s:?}");
-            }
+            expected.push_str(&transliterate(&run));
+            assert_eq!(sc.s(), expected, "input {s:?}");
         }
     }
 
@@ -917,6 +1042,71 @@ mod tests {
         let long = "ka".repeat(200);
         let out = typed(&long);
         assert_eq!(out.chars().filter(|&c| c == 'ಕ').count(), 200);
+        // 200 bare consonants have no safe cut: the old reset still applies.
+        let bare = "k".repeat(200);
+        assert_eq!(typed(&bare).chars().filter(|&c| c == 'ಕ').count(), 200);
+    }
+
+    #[test]
+    fn long_words_continue_past_the_buffer_limit() {
+        // Before 0.5.3 a word restarted after 48 keys, so a vowel typed next
+        // came out as an independent letter. Now the word continues.
+        for word in [
+            "ka".repeat(30) + "a",                    // vowel right at the limit
+            "namaskaaramu".repeat(6),                 // ordinary long word
+            "agni'mILE'purOhita'M".repeat(4),         // accents and anusvara
+            "k".repeat(40) + "aiu" + &"ta".repeat(20), // long consonant run first
+            "saMskRuta".repeat(8) + "M'",             // sign + accent after the limit
+        ] {
+            assert_eq!(typed(&word), transliterate(&word), "word {word:?}");
+        }
+        // An accent right after the cut still attaches to the syllable before it.
+        let w = "ka".repeat(24) + "'";
+        assert_eq!(typed(&w), "ಕ".repeat(24) + "\u{0951}");
+    }
+
+    #[test]
+    fn backspace_after_the_cut_only_undoes_the_live_part() {
+        let mut sc = Screen::default();
+        sc.type_str(&"ka".repeat(30)); // 60 keys: the first ones were committed
+        assert!(!sc.engine.is_idle());
+        for _ in 0..200 {
+            sc.backspace(); // live keys first, then native backspaces
+        }
+        assert_eq!(sc.s(), "");
+        assert!(sc.engine.is_idle());
+        // A native backspace forgets the committed start: an accent now passes.
+        sc.type_str(&"ka".repeat(30));
+        while !sc.engine.is_idle() {
+            sc.backspace();
+        }
+        sc.backspace();
+        assert_eq!(sc.key('\''), Outcome::Pass);
+    }
+
+    #[test]
+    fn signs_with_nothing_to_sit_on_stay_literal() {
+        assert_eq!(typed("M"), "M");
+        assert_eq!(typed("H"), "H");
+        assert_eq!(typed("ZM"), "ಽM");
+        assert_eq!(typed(":hH"), "ೱH");
+        assert_eq!(typed("Ma"), "Mಅ");
+        // With something before them they are signs, as always.
+        assert_eq!(typed("aM"), "ಅಂ");
+        assert_eq!(typed("kaH"), "ಕಃ");
+        assert_eq!(typed("ka`M"), "ಕಂ");
+        // Space ends the word, so a sign after it is literal again.
+        assert_eq!(typed("ka M"), "ಕ M");
+    }
+
+    #[test]
+    fn backtick_at_the_start_of_a_word_is_a_real_backtick() {
+        assert_eq!(typed("`"), "`");
+        assert_eq!(typed("``"), "``");
+        assert_eq!(typed("ka `x`"), "ಕ `ಕ್ಷ್");
+        // Inside a word it is still the break key.
+        assert_eq!(typed("s`ha"), "ಸ್ಹ");
+        assert_eq!(typed("c`H"), "\u{0C9A}\u{0CCD}\u{0C83}");
     }
 
     #[test]

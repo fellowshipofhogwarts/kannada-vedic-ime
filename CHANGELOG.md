@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.5.3
+
+### Typing (desktop app and web typer)
+- Long words no longer restart after 48 keys: the word simply continues, so a vowel typed
+  next is a vowel sign, not an independent letter.
+- `M`, `H` and `:M` with nothing before them (start of a word, after ಽ ೱ ೲ) type the plain
+  keys instead of a lone mark on a dotted circle.
+- A backtick at the start of a word types a real backtick; inside a word it is still the
+  break key.
+
+### Web typer
+- Works on phones and tablets (Android, iPhone, iPad; Chrome, Firefox, Safari, Edge,
+  Samsung Internet): no sideways scrolling, short labels on the three switches, larger tap
+  targets, the reference starts closed and the live inspector is hidden on phones.
+- The theme button is now an icon next to the title (◐ automatic, ☀ light, 🌙 dark).
+- The example text in the typing box is smaller and in the normal font.
+- The font credit now shows that Goda is based on earlier work by the Indian Institute
+  of Science. The duplicate credit line in the footer was removed (it is in About & credits).
+
+### Windows app
+- `kannada_ime --cleanup` removes the settings, the registry entry and the temp files,
+  so the program can be removed without traces (see QUICKSTART).
+- A typo in a hand-edited settings.txt keeps the default and is reported once at startup
+  (it used to switch the choice off silently). Settings are saved safely (temporary file,
+  then replace), and a failed save is reported.
+- The update check now offers the final release to people on a pre-release
+  (0.5.0-beta → 0.5.0), and reads GitHub's answer more strictly.
+- `curl.exe` and `reg.exe` are run from the Windows folder by full path.
+- The quick-reference guide file gets a fresh name each time, old ones are deleted, and
+  the registry entry for notifications is written only once.
+- `kannada_ime --help | more` shows the help text properly.
+- Quick reference: the ꣳ row is correct, and the Vedic-mode tip lists the `\` key.
+
+### Build
+- Minimum Rust version is now 1.85 (the msrv check is green again).
+- `winres` replaced by its maintained fork `winresource`; arboard is built without image
+  support (smaller program).
+- More tests: long words, literal signs and backtick, modifier and dead-key rules,
+  settings typos, version ordering, release JSON.
+
+### Known difference
+- The Linux input method (Python) still restarts long words and types a lone mark for a
+  word-initial `M`; it is replaced by the Rust engine in 0.6.0.
+
+
 ## 0.5.2
 
 Paste this section at the top of CHANGELOG.md.

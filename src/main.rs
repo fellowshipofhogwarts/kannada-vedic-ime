@@ -6,7 +6,7 @@
 //!   engine.rs   buffer → render → minimal edit   (pure, tested)
 //!   guide.rs    quick-reference HTML from tables (pure, tested)
 //!   state.rs    ON/OFF and Vedic-mode flags shared across threads
-//!   settings.rs the two choices that survive a restart (tiny text file)
+//!   settings.rs the three choices that survive a restart (tiny text file)
 //!   update.rs   "is there a newer release?" (system curl, no dependency)
 //!   inject.rs   Edit → synthetic input (Unicode / clipboard strategies)
 //!   hook/       global keyboard hook, per OS     (win.rs, linux.rs)
@@ -39,10 +39,14 @@ USAGE: kannada_ime [OPTIONS]
   --inject <unicode|clipboard>
                            how text is delivered (default: unicode)
   --translit <TEXT>        print the Kannada for TEXT and exit (no hooks)
+  --cleanup                remove the settings, the registry entry and the
+                           temp files this program created, then exit
   -V, --version            print the version
   -h, --help               this help
 
-Toggle at runtime with Ctrl+Shift+K or the tray menu.";
+Toggle at runtime with Ctrl+Shift+K or the tray menu.
+On Windows this text may appear after the prompt has returned; to read it
+comfortably, run:  kannada_ime --help | more";
 
 fn main() {
     let mut cfg = Config {
@@ -67,6 +71,12 @@ fn main() {
                 console_print(&format!("kannada_ime {}", update::CURRENT));
                 return;
             }
+            "--cleanup" => {
+                for line in tray::cleanup() {
+                    console_print(&line);
+                }
+                return;
+            }
             "-h" | "--help" => {
                 console_print(HELP);
                 return;
@@ -88,13 +98,28 @@ fn usage_error(msg: &str) {
 }
 
 /// Print a line for the command-line options. The Windows release build has no
-/// console of its own (so no window pops up when you double-click it), which
-/// made `--help` and `--translit` print nothing. Attach to the console of the
-/// terminal that started us and write there instead.
+/// console of its own (so no window pops up when you double-click it).
+///
+/// * Output redirected (`kannada_ime --help | more`, `> file.txt`): write to that
+///   normal output (0.5.3), so it arrives in order and `more` waits for it.
+/// * Otherwise: attach to the console of the terminal that started us and write
+///   there. The terminal does not wait for a windowed program, so the text can
+///   appear after its prompt (a Windows limit; HELP says so).
 #[cfg(windows)]
 fn console_print(text: &str) {
     use std::io::Write;
-    use windows_sys::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::System::Console::{
+        AttachConsole, GetStdHandle, ATTACH_PARENT_PROCESS, STD_OUTPUT_HANDLE,
+    };
+    // SAFETY: plain query of this process's standard output handle.
+    let out = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) };
+    if !out.is_null() && out != INVALID_HANDLE_VALUE {
+        let mut stdout = std::io::stdout();
+        let _ = writeln!(stdout, "{text}");
+        let _ = stdout.flush();
+        return;
+    }
     // SAFETY: plain call; it fails harmlessly when there is no parent console.
     unsafe {
         AttachConsole(ATTACH_PARENT_PROCESS);

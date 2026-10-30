@@ -3,7 +3,7 @@
 //! The tray menu writes this HTML to the temp dir and opens it in the browser.
 
 use crate::engine::transliterate;
-use crate::mapping::{ACCENTS, AGAMA_ANUSVARA, CONSONANTS, NUKTA, OTHERS, SIGNS, VOWELS};
+use crate::mapping::{ACCENTS, CONSONANTS, NUKTA, OTHERS, SIGNS, VOWELS};
 use std::fmt::Write as _;
 
 fn esc(s: &str) -> String {
@@ -73,10 +73,14 @@ still work. <kbd>M</kbd> or <kbd>H</kbd> right after a bare consonant gives the 
             keys(ks)
         );
     }
+    // g`M: the single agama sign. It already contains the ga, so typed alone it
+    // is just ꣳ, and after ಕ (`kag`M`) it is ಕꣳ. Both come from the engine.
     let _ = write!(
         h,
         "<tr><td><kbd>g</kbd> <kbd>`</kbd> <kbd>M</kbd> <span class=note>(Vedic mode)</span></td>\
-<td class=kn>ಅ{AGAMA_ANUSVARA}</td><td class=kn>ಗ{AGAMA_ANUSVARA}</td></tr>"
+<td class=kn>{}</td><td class=kn>{}</td></tr>",
+        transliterate("g`M"),
+        transliterate("kag`M")
     );
     h.push_str("</table>");
 
@@ -138,8 +142,9 @@ U+1CDA; if they show as boxes, install a Vedic-capable Kannada font.</p>",
     // Tips
     h.push_str(
         "<h2>Tips</h2><ul>\
-<li><kbd>`</kbd> (backtick) is a break: <code>s`ha</code> → ಸ್ಹ instead of ಶ. On a German keyboard <kbd>Shift</kbd>+<kbd>´</kbd> works as the break key without Space.</li>\
-<li>Vedic mode (tray menu) switches the accent keys and ꣳ on or off. Off, the keys <kbd>'</kbd> <kbd>&quot;</kbd> <kbd>_</kbd> <kbd>^</kbd> type normally.</li>\
+<li><kbd>`</kbd> (backtick) is a break: <code>s`ha</code> → ಸ್ಹ instead of ಶ. On a German keyboard <kbd>Shift</kbd>+<kbd>´</kbd> works as the break key without Space. At the start of a word it types a normal backtick.</li>\
+<li><kbd>M</kbd>, <kbd>H</kbd> and <kbd>:M</kbd> need a letter before them; at the start of a word they type M, H and :M.</li>\
+<li>Vedic mode (tray menu) switches the accent keys and ꣳ on or off. Off, the keys <kbd>'</kbd> <kbd>&quot;</kbd> <kbd>_</kbd> <kbd>\\</kbd> <kbd>^</kbd> type normally. On a German keyboard <kbd>\\</kbd> is <kbd>AltGr</kbd>+<kbd>ß</kbd>.</li>\
 <li><kbd>Backspace</kbd> undoes the last <i>keystroke</i> of the current word.</li>\
 <li>The number keys type Kannada digits ೦ ೧ ೨ … ೯ (numpad too). Untick \"Kannada digits\" in the tray menu for 0 1 2 … 9.</li>\
 <li>Space, Enter, arrows, mouse clicks and shortcuts end the current word.</li>\
@@ -158,5 +163,26 @@ mod tests {
         assert!(h.contains("U+0951") && h.contains("U+0952") && h.contains("U+1CDA"));
         assert!(h.contains("ಕ್ಷ"));
         assert!(h.len() > 4000);
+    }
+}
+
+#[cfg(test)]
+mod tests_053 {
+    use super::*;
+
+    #[test]
+    fn agama_row_shows_the_real_output() {
+        let h = html();
+        // Alone: just ꣳ (it contains the ga); after ಕ: ಕꣳ. Never ಅꣳ or ಗꣳ.
+        assert!(h.contains("<td class=kn>\u{A8F3}</td><td class=kn>\u{0C95}\u{A8F3}</td>"));
+        assert!(!h.contains("\u{0C97}\u{A8F3}"));
+    }
+
+    #[test]
+    fn vedic_off_tip_lists_every_single_accent_key() {
+        let h = html();
+        for k in ["'", "&quot;", "_", "\\", "^"] {
+            assert!(h.contains(&format!("<kbd>{k}</kbd> ")), "missing key {k}");
+        }
     }
 }

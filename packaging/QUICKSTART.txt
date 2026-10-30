@@ -1,4 +1,4 @@
-Kannada Vedic IME 0.5.0 - quick start (Windows)
+Kannada Vedic IME - quick start (Windows)
 
 1. Install the font: double-click Arkavathi.ttf, then click Install.
    (If you had "Kaveri" or "Kannada Vedic Long" before, uninstall it first:
@@ -11,8 +11,9 @@ Kannada Vedic IME 0.5.0 - quick start (Windows)
    "Vedic mode" turns the accent keys on or off, "Kannada digits" switches the number keys
    between ೧ ೨ ೩ and 1 2 3, and "Check for updates" opens the release page.
 
-New in 0.5.0: Z = ಽ, :h = ೱ, :H = ೲ, zh = ೞ, :l = ಌ, :L = ೡ, :M = ಁ, and Q after a
-consonant = nukta (jQa = ಜ಼). The number keys now type Kannada digits (switch in the tray menu).
+More keys: Z = ಽ, :h = ೱ, :H = ೲ, zh = ೞ, :l = ಌ, :L = ೡ, :M = ಁ, and Q after a
+consonant = nukta (jQa = ಜ಼). The number keys type Kannada digits (switch in the tray menu).
+What is new in each version: see CHANGELOG.md.
 
 Windows may say "Windows protected your PC" because the program is not signed.
 Click "More info", then "Run anyway". Only do this for a copy you downloaded from the
@@ -21,12 +22,17 @@ official project page.
 Notepad does not position Vedic marks correctly; use a browser, Word, LibreOffice or VS Code.
 
 German keyboard: Shift + the key left of Backspace (the accent key) is the break key, no Space needed.
-AltGr characters such as ~ work too.
+AltGr characters work too, and attach to the syllable: AltGr+ß (\) is the lower accent bar.
 
 To start it with Windows: press Win+R, type shell:startup, press Enter, and drop a
 shortcut to kannada_ime.exe into that folder.
 
-Privacy: no data is collected. The only network call is the optional update check to
-GitHub, which you can switch off in the tray menu.
+Privacy: no personal data is collected and nothing you type leaves your computer. The only
+network call is the optional update check to GitHub (like any web request, GitHub sees your
+IP address); switch it off in the tray menu.
+
+To remove the program completely: exit it from the tray menu, then open a Command Prompt in
+its folder and run   kannada_ime --cleanup   (removes its settings, its registry entry and
+its temp files). Then delete the folder.
 
 Licences: program MIT OR Apache-2.0, font SIL OFL 1.1 (OFL.txt).

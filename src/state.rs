@@ -1,7 +1,15 @@
 //! state.rs — the tiny bit of state shared between the hook thread and the UI
-//! thread: "is the engine ON", "is Vedic mode on", plus an epoch counter so the hook thread knows to
-//! flush its typing buffer whenever the state changed behind its back (menu
-//! click) — otherwise a half-typed word could leak across an ON/OFF flip.
+//! thread: "is the engine ON", "is Vedic mode on", "Kannada digits", plus an
+//! epoch counter.
+//!
+//! The epoch changes only on ON/OFF (`toggle`), so the hook thread flushes its
+//! typing buffer when typing was switched behind its back (menu click);
+//! otherwise a half-typed word could leak across an ON/OFF flip. Vedic mode and
+//! digits need no epoch: the hook passes both to the engine before every key,
+//! and the engine ends the word itself when either changes.
+//!
+//! `Relaxed` ordering is enough: each flag is read on its own, and the worst
+//! case of a late read is one key handled with the old setting.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
@@ -41,7 +49,8 @@ impl AppState {
         self.vedic.load(Ordering::Relaxed)
     }
 
-    /// The hook thread notices the change on its next key and flushes its word.
+    /// The hook thread passes this to the engine on its next key; the engine
+    /// ends the current word if the value changed.
     pub fn set_vedic(&self, on: bool) {
         self.vedic.store(on, Ordering::Relaxed);
     }

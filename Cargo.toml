@@ -1,17 +1,15 @@
 [package]
 name = "kannada_ime"
-version = "0.5.2"
+version = "0.5.3"
 license = "MIT OR Apache-2.0"
 authors = ["Shashank Koundinya Banavathi Rajashekara"]
 edition = "2021"
-rust-version = "1.80"
+# Oldest Rust that can build this (checked by the msrv job in CI). 1.85: some
+# dependencies (e.g. icu_normalizer 2.4) use the 2024 edition.
+rust-version = "1.85"
 description = "Tiny background agent: phonetic Kannada typing with Vedic accents in any text field"
 readme = "README.md"
 publish = false
-
-[[bin]]
-name = "kannada_ime"
-path = "src/main.rs"
 
 # ---- shared dependencies --------------------------------------------------
 [dependencies]
@@ -19,7 +17,8 @@ tao = "0.30"            # event loop (Win32 message loop / GTK) for the tray
 tray-icon = "0.19"      # system tray icon + context menu (re-exports muda menus)
 notify-rust = "4"       # native toast notifications (WinRT toast / D-Bus)
 open = "5"              # open the quick-reference page in the default browser
-arboard = "3"           # clipboard (only used by `--inject clipboard`)
+# clipboard (only used by `--inject clipboard`); text only, so no image support
+arboard = { version = "3", default-features = false }
 
 # ---- Windows: raw Win32 bindings (same project as windows-rs) --------------
 [target.'cfg(windows)'.dependencies.windows-sys]
@@ -40,9 +39,9 @@ features = [
 rdev = { version = "0.5", features = ["unstable_grab"] }
 enigo = "0.3"
 
-# ---- Windows: embed the .exe icon + version info ---------------------------
-[target.'cfg(windows)'.build-dependencies]
-winres = "0.1"
+# ---- Embed the .exe icon + version info (build.rs; acts only for Windows targets)
+[build-dependencies]
+winresource = "0.1"
 
 # ---- Small, fast release binary --------------------------------------------
 [profile.release]

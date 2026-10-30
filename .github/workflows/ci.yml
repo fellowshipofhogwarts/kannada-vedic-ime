@@ -27,14 +27,14 @@ jobs:
       - run: cargo build --release --locked
 
   msrv:
-    # Checks the promise `rust-version = "1.80"` in Cargo.toml (the oldest Rust
+    # Checks the promise `rust-version = "1.85"` in Cargo.toml (the oldest Rust
     # that can build this project). INFORMATION ONLY: if this job fails it shows a
     # red mark, but the run as a whole still passes and nothing is blocked.
     runs-on: windows-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@1.80
+      - uses: dtolnay/rust-toolchain@1.85
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --locked
 

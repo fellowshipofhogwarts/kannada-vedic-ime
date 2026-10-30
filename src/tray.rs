@@ -14,7 +14,8 @@
 //! decoder linked in); regenerate them with `tools/make_icons.py`.
 
 use std::io::Write as _;
-use std::sync::Arc;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use tao::event::{Event, StartCause};
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
@@ -151,18 +152,32 @@ impl Tray {
 const TOAST_ID: &str = "KannadaVedicIME.Typer";
 
 #[cfg(windows)]
-fn toast_identity_ready() -> bool {
+fn toast_key() -> String {
+    format!("HKCU\\Software\\Classes\\AppUserModelId\\{TOAST_ID}")
+}
+
+/// Run Windows' own `reg.exe` by full path (0.5.3: by bare name Windows would
+/// look in the program's folder first) without a console window.
+#[cfg(windows)]
+fn reg(args: &[&str]) -> bool {
     use std::os::windows::process::CommandExt;
+    std::process::Command::new(update::system32().join("reg.exe"))
+        .args(args)
+        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+#[cfg(windows)]
+fn toast_identity_ready() -> bool {
     use std::sync::OnceLock;
     static READY: OnceLock<bool> = OnceLock::new();
     *READY.get_or_init(|| {
-        let key = format!("HKCU\\Software\\Classes\\AppUserModelId\\{TOAST_ID}");
-        std::process::Command::new("reg")
-            .args(["add", &key, "/v", "DisplayName", "/t", "REG_SZ", "/d", "Kannada IME", "/f"])
-            .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        let key = toast_key();
+        // Already registered (every launch after the first): nothing to write.
+        reg(&["query", &key, "/v", "DisplayName"])
+            || reg(&["add", &key, "/v", "DisplayName", "/t", "REG_SZ", "/d", "Kannada IME", "/f"])
     })
 }
 
@@ -204,26 +219,132 @@ fn toast(active: bool, source: ToggleSource) {
     notify(title, &format!("{body}  (via {via})"));
 }
 
-/// Write the quick-reference page to a per-process file in the temp folder and
-/// open it. `create_new` refuses to follow a file or link that somebody else
-/// planted under that name.
-fn open_guide() {
-    let path = std::env::temp_dir().join(format!(
-        "kannada_ime_quick_reference_{}.html",
-        std::process::id()
-    ));
-    if !path.exists() {
-        let written = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)
-            .and_then(|mut f| f.write_all(guide::html().as_bytes()));
-        if let Err(e) = written {
-            eprintln!("kannada_ime: cannot write guide: {e}");
-            return;
+const GUIDE_PREFIX: &str = "kannada_ime_quick_reference_";
+
+/// The guide file this run created (deleted again on Exit).
+static GUIDE: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+/// Write the quick-reference page to a new file in the temp folder. The name
+/// includes the process id and the time, and `create_new` refuses any name that
+/// already exists, so a file or link somebody else planted is never used
+/// (0.5.3: an existing file used to be opened as it was).
+fn write_guide() -> std::io::Result<PathBuf> {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    for n in 0..16u32 {
+        let path = std::env::temp_dir().join(format!(
+            "{GUIDE_PREFIX}{}_{stamp}_{n}.html",
+            std::process::id()
+        ));
+        match std::fs::OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(mut f) => {
+                f.write_all(guide::html().as_bytes())?;
+                return Ok(path);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e),
         }
     }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::AlreadyExists,
+        "no free file name in the temp folder",
+    ))
+}
+
+/// Open the quick-reference page, writing it the first time.
+fn open_guide() {
+    let mut guide = GUIDE.lock().unwrap_or_else(|e| e.into_inner());
+    let path = match guide.as_ref().filter(|p| p.is_file()) {
+        Some(p) => p.clone(),
+        None => match write_guide() {
+            Ok(p) => {
+                *guide = Some(p.clone());
+                p
+            }
+            Err(e) => {
+                eprintln!("kannada_ime: cannot write guide: {e}");
+                return;
+            }
+        },
+    };
     let _ = open::that(&path);
+}
+
+/// Delete the guide file of this run (on Exit).
+fn remove_own_guide() {
+    if let Some(p) = GUIDE.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        let _ = std::fs::remove_file(p);
+    }
+}
+
+/// Delete guide files left behind by earlier runs (0.5.3: they were never
+/// deleted). Only plain files with our name pattern that are older than
+/// `min_age` are touched; links are never followed.
+fn remove_old_guides(min_age: std::time::Duration) -> usize {
+    let Ok(entries) = std::fs::read_dir(std::env::temp_dir()) else {
+        return 0;
+    };
+    let mut removed = 0;
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if !name.starts_with(GUIDE_PREFIX) || !name.ends_with(".html") {
+            continue;
+        }
+        let Ok(kind) = entry.file_type() else { continue };
+        let old_enough = entry
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.elapsed().ok())
+            .is_some_and(|age| age >= min_age);
+        if kind.is_file() && old_enough && std::fs::remove_file(entry.path()).is_ok() {
+            removed += 1;
+        }
+    }
+    removed
+}
+
+/// `--cleanup`: remove everything the program leaves on this computer, so it can
+/// be deleted without traces (0.5.3). Returns one line per step, for printing.
+pub fn cleanup() -> Vec<String> {
+    let mut report = vec![
+        "Kannada IME clean-up (exit the program from the tray menu first).".to_string(),
+    ];
+    match crate::settings::folder() {
+        Some(dir) if dir.exists() => match std::fs::remove_dir_all(&dir) {
+            Ok(()) => report.push(format!("Removed the settings folder {}", dir.display())),
+            Err(e) => report.push(format!("Could not remove {}: {e}", dir.display())),
+        },
+        _ => report.push("No settings folder found.".to_string()),
+    }
+    #[cfg(windows)]
+    {
+        let key = toast_key();
+        if !reg(&["query", &key]) {
+            report.push("No registry entry found.".to_string());
+        } else if reg(&["delete", &key, "/f"]) {
+            report.push(format!("Removed the registry entry {key}"));
+        } else {
+            report.push(format!("Could not remove the registry entry {key}"));
+        }
+    }
+    let n = remove_old_guides(std::time::Duration::ZERO);
+    report.push(format!("Removed {n} quick-reference file(s) from the temp folder."));
+    report.push("Done. You can now delete kannada_ime.exe and the font if you like.".to_string());
+    report
+}
+
+/// Save the settings; tell the user if that failed (0.5.3: failures were silent).
+fn save_settings(settings: &Settings) {
+    if let Err(e) = settings.save() {
+        notify(
+            "Kannada IME: settings not saved",
+            &format!("Your choice works now but will be forgotten after a restart ({e})."),
+        );
+    }
 }
 
 fn start_update_check(proxy: &tao::event_loop::EventLoopProxy<UserEvent>, manual: bool) {
@@ -236,7 +357,18 @@ fn start_update_check(proxy: &tao::event_loop::EventLoopProxy<UserEvent>, manual
 
 /// Build everything and run the UI loop. Never returns.
 pub fn run(cfg: Config) -> ! {
-    let mut settings = Settings::load();
+    let (mut settings, problems) = Settings::load_report();
+    if !problems.is_empty() {
+        // Typos in a hand-edited settings.txt: say so once (0.5.3).
+        let mut body = problems.iter().take(3).cloned().collect::<Vec<_>>().join("\n");
+        if problems.len() > 3 {
+            body.push_str(&format!("\n… and {} more.", problems.len() - 3));
+        }
+        notify("Kannada IME: settings.txt", &body);
+    }
+    // Guide pages from earlier runs (an hour old, so another running copy on
+    // Linux keeps its own).
+    remove_old_guides(std::time::Duration::from_secs(3600));
     let state = AppState::new(!cfg.start_off, settings.vedic, settings.kannada_digits);
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
@@ -333,7 +465,7 @@ pub fn run(cfg: Config) -> ! {
                     let on = t.vedic.is_checked();
                     state.set_vedic(on);
                     settings.vedic = on;
-                    settings.save();
+                    save_settings(&settings);
                     notify(
                         if on { "Vedic mode ON" } else { "Vedic mode OFF" },
                         if on {
@@ -346,7 +478,7 @@ pub fn run(cfg: Config) -> ! {
                     let on = t.digits.is_checked();
                     state.set_digits(on);
                     settings.kannada_digits = on;
-                    settings.save();
+                    save_settings(&settings);
                     notify(
                         if on { "Kannada digits" } else { "English digits" },
                         if on {
@@ -365,9 +497,10 @@ pub fn run(cfg: Config) -> ! {
                     }
                 } else if ev.id == t.auto_id {
                     settings.update_check = t.auto_check.is_checked();
-                    settings.save();
+                    save_settings(&settings);
                 } else if ev.id == t.quit_id {
                     tray.take(); // drop the icon so it vanishes immediately
+                    remove_own_guide();
                     *control_flow = ControlFlow::Exit;
                 }
             }

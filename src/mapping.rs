@@ -252,13 +252,21 @@ pub fn is_accent_key(c: char) -> bool {
 pub fn is_phonetic_key(c: char) -> bool {
     static K: OnceLock<[bool; 128]> = OnceLock::new();
     let k = K.get_or_init(|| {
+        // Indexed by the first *character* of each spelling. Spellings are
+        // ASCII (checked by a test); a non-ASCII one would simply not be
+        // swallowed instead of crashing (0.5.3; it used the first byte before).
         let mut a = [false; 128];
+        let first = |key: &str| key.chars().next().filter(char::is_ascii);
         for key in table().keys() {
-            a[key.as_bytes()[0] as usize] = true;
+            if let Some(c) = first(key) {
+                a[c as usize] = true;
+            }
         }
         for (keys, _, _) in ACCENTS {
             for key in *keys {
-                a[key.as_bytes()[0] as usize] = false;
+                if let Some(c) = first(key) {
+                    a[c as usize] = false;
+                }
             }
         }
         a
@@ -275,6 +283,14 @@ mod tests {
         // 23 vowel + 53 consonant (incl. x, jn, f, zh) + 3 sign + 3 other
         // + Q + 6 accent + 1 break spellings. Update when you edit the tables.
         assert_eq!(table().len(), 90);
+    }
+
+    #[test]
+    fn all_spellings_are_ascii() {
+        // The engine only swallows ASCII keys (see is_phonetic_key).
+        for key in table().keys() {
+            assert!(!key.is_empty() && key.is_ascii(), "spelling {key:?} must be ASCII");
+        }
     }
 
     #[test]

@@ -183,7 +183,29 @@ fn win() -> bool {
 /// Right-Alt held together. That is *not* a shortcut: it is how characters such
 /// as `~ @ | { [ ] } \` are typed. A real Ctrl or the left Alt key rules it out.
 fn altgr() -> bool {
-    down(VK_RMENU) && down(VK_LCONTROL) && !down(VK_RCONTROL) && !down(VK_LMENU)
+    is_altgr(down(VK_RMENU), down(VK_LCONTROL), down(VK_RCONTROL), down(VK_LMENU))
+}
+
+/// The AltGr rule on its own (pure, unit-tested): Right-Alt and Left-Ctrl held,
+/// and neither Right-Ctrl nor Left-Alt.
+fn is_altgr(ralt: bool, lctrl: bool, rctrl: bool, lalt: bool) -> bool {
+    ralt && lctrl && !rctrl && !lalt
+}
+
+/// A shortcut that must pass straight through and end the word (pure,
+/// unit-tested): Ctrl or Alt held (but not as AltGr), or any Win key.
+fn is_shortcut(ctrl: bool, alt: bool, win: bool, altgr: bool) -> bool {
+    ((ctrl || alt) && !altgr) || win
+}
+
+/// What a dead key means to the engine (pure, unit-tested): the grave and
+/// circumflex dead keys (German Shift+´ and ^) are the break key and the udatta;
+/// every other dead key keeps its normal behaviour.
+fn dead_key_char(c: Option<char>) -> Option<char> {
+    match c {
+        Some(c @ ('`' | '^')) => Some(c),
+        _ => None,
+    }
 }
 
 /// Keys that, pressed on their own, must not end the word.
@@ -251,10 +273,7 @@ fn translate(kb: &KBDLLHOOKSTRUCT) -> Option<char> {
         char::from_u32(buf[0] as u32).filter(|c| !c.is_control())
     } else if n < 0 {
         // Dead key: the spacing diacritic is stored in buf[0].
-        match char::from_u32(buf[0] as u32) {
-            Some(c @ ('`' | '^')) => Some(c),
-            _ => None,
-        }
+        dead_key_char(char::from_u32(buf[0] as u32))
     } else {
         None // 0 = no char, >1 = sequence: not ours
     }
@@ -398,7 +417,7 @@ impl Ctx {
         }
         // AltGr is Ctrl+Alt to Windows but it only *types* characters; real
         // shortcuts (Ctrl+C, Alt+Tab, Win+…) still pass straight through.
-        if ((ctrl() || alt()) && !altgr()) || win() {
+        if is_shortcut(ctrl(), alt(), win(), altgr()) {
             self.engine.reset(); // shortcut: hands off
             return false;
         }
@@ -690,6 +709,34 @@ mod tests {
         for vk in [VK_BACK, 0x41 /* A */, VK_K as u16, 0x20 /* Space */, 0x0D /* Enter */] {
             assert!(!is_pure_modifier(vk), "vk {vk:#x}");
         }
+    }
+
+    #[test]
+    fn altgr_is_right_alt_with_left_ctrl_only() {
+        assert!(is_altgr(true, true, false, false));
+        assert!(!is_altgr(true, false, false, false)); // Right-Alt alone
+        assert!(!is_altgr(false, true, false, false)); // Left-Ctrl alone
+        assert!(!is_altgr(true, true, true, false)); // plus a real Right-Ctrl
+        assert!(!is_altgr(true, true, false, true)); // plus a real Left-Alt
+    }
+
+    #[test]
+    fn shortcuts_pass_but_altgr_characters_do_not() {
+        assert!(!is_shortcut(false, false, false, false)); // plain typing
+        assert!(is_shortcut(true, false, false, false)); // Ctrl+C
+        assert!(is_shortcut(false, true, false, false)); // Alt+Tab
+        assert!(is_shortcut(false, false, true, false)); // Win+E
+        assert!(!is_shortcut(true, true, false, true)); // AltGr+ß = \
+        assert!(is_shortcut(true, true, true, true)); // Win wins, even with AltGr
+    }
+
+    #[test]
+    fn only_grave_and_circumflex_dead_keys_are_ours() {
+        assert_eq!(dead_key_char(Some('`')), Some('`'));
+        assert_eq!(dead_key_char(Some('^')), Some('^'));
+        assert_eq!(dead_key_char(Some('\u{B4}')), None); // acute ´
+        assert_eq!(dead_key_char(Some('\u{A8}')), None); // diaeresis ¨
+        assert_eq!(dead_key_char(None), None);
     }
 
     #[test]
